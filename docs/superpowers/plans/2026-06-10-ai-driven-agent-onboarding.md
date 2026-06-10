@@ -492,11 +492,11 @@ export function buildSessionPrompt(i: OnboardingInputs): string {
   return `You are connected to atom, our team's shared knowledge hub, over MCP (agent id: ${i.agentId}). atom is the source of truth for how we work and what we know.
 
 Before any task:
-1. Load context — call search_cards with "agent onboarding" and compile the matching node to learn how we work, conventions, and where things live. If no onboarding card exists yet, get_tree from the root and infer conventions from the top-level structure.
+1. Load context — call search_cards with "agent onboarding" and compile_subtree on the matching node to learn how we work, conventions, and where things live. If no onboarding card exists yet, get_tree from the root and infer conventions from the top-level structure.
 2. Read before acting — search atom for relevant prior knowledge instead of assuming.
 3. Write back — record durable learnings, decisions, and reusable facts as new atomic cards (create_card / batch_op), placed in the right tree location. Keep one idea per card.
 
-Tools: search_cards, get_tree, get_node, list_children, compile, create_card, update_card, create_symlink, move_node, batch_op.`;
+Tools: search_cards, get_tree, get_node, list_children, compile_subtree, create_card, update_card, create_symlink, move_node, batch_op.`;
 }
 
 export function buildClientSnippet(client: OnboardingClient, i: OnboardingInputs): string {

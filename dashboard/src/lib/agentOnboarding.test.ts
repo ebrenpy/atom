@@ -49,6 +49,8 @@ describe('agent onboarding builders', () => {
     expect(p).toContain('agent id: seosoyoung');
     expect(p).toContain('search_cards');
     expect(p).toContain('Write back');
+    // tool names must match registered MCP tools (it's compile_subtree, not compile)
+    expect(p).toContain('compile_subtree');
   });
 
   test('buildClientSnippet dispatches by client id', () => {

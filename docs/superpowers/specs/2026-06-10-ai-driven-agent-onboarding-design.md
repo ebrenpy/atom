@@ -14,7 +14,7 @@ Today, creating an agent (`agent_id` + display name) yields a one-time secret an
 ## 2. Key Decisions (from brainstorming)
 
 1. **Agent role = read+write contributor.** The session prompt instructs the AI to *read before acting* (search/compile atom for prior knowledge) and *write back* durable learnings as cards. Matches atom's "by the agents, for the agents" philosophy.
-2. **Prompt source of truth = atom bootstrap.** The dashboard generates a *short* prompt that tells the AI to first load atom's "Agent Onboarding" card (via `search_cards` → `compile`). Real, evolving guidance lives in atom itself — change it without redeploying the dashboard.
+2. **Prompt source of truth = atom bootstrap.** The dashboard generates a *short* prompt that tells the AI to first load atom's "Agent Onboarding" card (via `search_cards` → `compile_subtree`). Real, evolving guidance lives in atom itself — change it without redeploying the dashboard.
 3. **Layout = Approach A (inline).** Onboarding lives inside the existing "API 키 관리" tab. The one-time secret banner expands into an onboarding panel; each agent list row gets a "연결" (Connect) button opening the same panel inline.
 4. **Onboarding card = auto-seeded** on startup if absent (idempotent, mirrors the legacy-agent migration), so the bootstrap prompt always resolves.
 
@@ -64,11 +64,11 @@ Snippets are built client-side from `{ agentId, secret, mcpUrl, headerName }`.
 > You are connected to **atom**, our team's shared knowledge hub, over MCP (agent id: `{{agent_id}}`). atom is the source of truth for how we work and what we know.
 >
 > Before any task:
-> 1. **Load context** — call `search_cards` with "agent onboarding" and `compile` the matching node to read how we work, conventions, and where things live. If no onboarding card exists yet, `get_tree` from the root and infer conventions from the top-level structure.
+> 1. **Load context** — call `search_cards` with "agent onboarding" and `compile_subtree` the matching node to read how we work, conventions, and where things live. If no onboarding card exists yet, `get_tree` from the root and infer conventions from the top-level structure.
 > 2. **Read before acting** — search atom for relevant prior knowledge instead of assuming.
 > 3. **Write back** — record durable learnings, decisions, and reusable facts as new atomic cards (`create_card` / `batch_op`), placed in the right tree location. Keep one idea per card.
 >
-> Tools: `search_cards`, `get_tree`, `get_node`, `list_children`, `compile`, `create_card`, `update_card`, `create_symlink`, `move_node`, `batch_op`.
+> Tools: `search_cards`, `get_tree`, `get_node`, `list_children`, `compile_subtree`, `create_card`, `update_card`, `create_symlink`, `move_node`, `batch_op`.
 
 The prompt references the onboarding card **by title search** (no hard-coded node id), so re-seeding or moving the card doesn't break it.
 
@@ -106,7 +106,7 @@ Add an `onboarding.*` namespace to **both** `dashboard/src/locales/en/translatio
 2. User creates agent → API returns agent + one-time `secret`.
 3. `AgentOnboardingPanel` renders snippets/prompt from `agentOnboarding.ts` using `{ agentId, secret, ...connectionInfo }`.
 4. User copies the Connect snippet into their MCP client and the prompt into their AI session.
-5. AI connects (`x-api-key`), runs the prompt → calls `search_cards("agent onboarding")` → `compile` → starts reading/writing atom.
+5. AI connects (`x-api-key`), runs the prompt → calls `search_cards("agent onboarding")` → `compile_subtree` → starts reading/writing atom.
 
 ## 10. Edge Cases & Error Handling
 
