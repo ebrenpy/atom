@@ -31,7 +31,7 @@ export function AgentManagementTab() {
 
   const handleCreate = async () => {
     if (!newAgentId.trim()) {
-      setCreateError('agent_id를 입력하세요.');
+      setCreateError(t('agents.name_required'));
       return;
     }
     setCreating(true);
@@ -154,7 +154,9 @@ export function AgentManagementTab() {
                     setConnectAgentId((cur) => (cur === agent.agent_id ? null : agent.agent_id))
                   }
                 >
-                  {t('onboarding.connect_btn')}
+                  {connectAgentId === agent.agent_id
+                    ? t('common.close')
+                    : t('onboarding.connect_btn')}
                 </button>
                 <button
                   className="text-xs rounded px-2 py-0.5 border border-border bg-transparent text-muted-foreground cursor-pointer hover:bg-muted font-sans"

@@ -53,6 +53,7 @@
     "creating": "생성 중...",
     "no_agents": "등록된 에이전트가 없습니다.",
     "name_placeholder": "agent_id (예: my-agent)",
+    "name_required": "agent_id를 입력하세요.",
     "display_name_placeholder": "표시 이름 (선택)",
     "active": "활성",
     "inactive": "비활성",

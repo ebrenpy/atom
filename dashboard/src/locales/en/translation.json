@@ -53,6 +53,7 @@
     "creating": "Creating...",
     "no_agents": "No agents registered.",
     "name_placeholder": "agent_id (e.g. my-agent)",
+    "name_required": "agent_id is required.",
     "display_name_placeholder": "Display name (optional)",
     "active": "Active",
     "inactive": "Inactive",
