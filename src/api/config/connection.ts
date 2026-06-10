@@ -15,6 +15,11 @@ function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
+/**
+ * Resolve the public MCP endpoint URL agents connect to.
+ * Precedence: PUBLIC_MCP_URL (used verbatim — must already include the /mcp path)
+ * → FRONTEND_URL + "/mcp" → request origin + "/mcp" → relative "/mcp".
+ */
 export function resolveMcpUrl(input: ConnectionInfoInput): string {
   const publicMcpUrl = input.publicMcpUrl?.trim();
   if (publicMcpUrl) return stripTrailingSlash(publicMcpUrl);

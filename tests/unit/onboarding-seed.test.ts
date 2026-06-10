@@ -15,6 +15,10 @@ describe("onboarding card seed", () => {
     });
     expect(result).toBe(true);
     expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      card_type: "knowledge",
+      title: ONBOARDING_CARD_TITLE,
+    });
   });
 
   it("is idempotent — does nothing when the card already exists", async () => {
