@@ -17,6 +17,7 @@ import {
   type SqliteMigrationDatabase,
 } from '../config/migration-service.js';
 import { agentToPublic, isAdminRemovalChange, requireRole, wouldRemoveLastAdmin } from '../config/policy.js';
+import { buildConnectionInfo } from '../config/connection.js';
 import { getDb } from '../../db/client.js';
 import type { DatabaseAdapter } from '../../db/adapter.js';
 import {
@@ -195,6 +196,24 @@ export const configRoutes: FastifyPluginAsync = async (app) => {
     if (!agent) return reply.code(404).send({ error: 'Agent not found' });
     agentKeyVerifier.clear();
     return reply.send(agentToPublic(agent));
+  });
+
+  // ── Agent Onboarding ────────────────────────────────────────────────────────
+
+  // GET /api/config/connection-info — MCP URL + header name for onboarding (editor+)
+  app.get('/api/config/connection-info', async (req, reply) => {
+    if (!requireRole(req, reply, 'editor')) return;
+    const xfp = req.headers['x-forwarded-proto'];
+    const proto = (Array.isArray(xfp) ? xfp[0] : xfp) ?? req.protocol;
+    const host = req.headers.host;
+    const requestOrigin = host ? `${proto}://${host}` : undefined;
+    return reply.send(
+      buildConnectionInfo({
+        publicMcpUrl: process.env['PUBLIC_MCP_URL'],
+        frontendUrl: process.env['FRONTEND_URL'],
+        requestOrigin,
+      })
+    );
   });
 
   // ── Database Info ─────────────────────────────────────────────────────────
