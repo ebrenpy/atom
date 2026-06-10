@@ -61,6 +61,15 @@ export async function selectCardById(
   return rowToCard(result.rows[0]);
 }
 
+export async function findCardByTitle(
+  db: Queryable,
+  title: string
+): Promise<Card | null> {
+  const result = await db.query(`SELECT * FROM cards WHERE title = $1 LIMIT 1`, [title]);
+  if (result.rows.length === 0) return null;
+  return rowToCard(result.rows[0]);
+}
+
 export type UpdateCardResult =
   | { card: Card; conflict: false }
   | { conflict: true; actualVersion: number }

@@ -22,6 +22,9 @@ import { loadAdapters } from "../unfurl/loader.js";
 import { adapterRegistry } from "../unfurl/registry.js";
 import { userExists, insertUser } from "../db/queries/users.js";
 import { findAgentByAgentId, insertAgent } from "../db/queries/agents.js";
+import { findCardByTitle } from "../db/queries/cards.js";
+import { createCard } from "../services/card.service.js";
+import { ensureOnboardingCard, ONBOARDING_CARD_TITLE } from "./onboarding-seed.js";
 import bcrypt from "bcryptjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -81,6 +84,17 @@ async function seedMigration(): Promise<void> {
       display_name: "Legacy Agent (migrated from MCP_SECRET)",
     });
     console.log("[seed] Migrated MCP_SECRET as legacy agent");
+  }
+
+  // Agent Onboarding card — bootstrap target referenced by agent session prompts
+  const seededOnboarding = await ensureOnboardingCard({
+    exists: async (title) => (await findCardByTitle(db, title)) !== null,
+    create: async (input) => {
+      await createCard(null, input);
+    },
+  });
+  if (seededOnboarding) {
+    console.log(`[seed] Created "${ONBOARDING_CARD_TITLE}" card`);
   }
 }
 
