@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfig } from '../../hooks/useConfig';
+import { AgentOnboardingPanel } from './AgentOnboardingPanel';
 
 export function AgentManagementTab() {
   const { t } = useTranslation();
   const {
     agents,
     loading,
-    lastCreatedSecret,
+    lastCreated,
+    connectionInfo,
     clearSecret,
     loadAgents,
     createAgent,
@@ -21,7 +23,7 @@ export function AgentManagementTab() {
   const [creating, setCreating] = useState(false);
   const [reissueErrors, setReissueErrors] = useState<Record<string, string>>({});
   const [updateErrors, setUpdateErrors] = useState<Record<string, string>>({});
-  const [copied, setCopied] = useState(false);
+  const [connectAgentId, setConnectAgentId] = useState<string | null>(null);
 
   useEffect(() => {
     loadAgents();
@@ -72,43 +74,16 @@ export function AgentManagementTab() {
     }
   };
 
-  const handleCopy = async () => {
-    if (!lastCreatedSecret) return;
-    try {
-      await navigator.clipboard.writeText(lastCreatedSecret);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard API 실패 시 무시
-    }
-  };
-
   return (
     <div className="flex flex-col gap-5">
-      {/* 시크릿 1회 표시 배너 */}
-      {lastCreatedSecret && (
-        <div className="flex flex-col gap-2 bg-brand/8 border border-brand/25 rounded-md px-3 py-3">
-          <div className="text-xs font-semibold text-brand">
-            {t('agents.new_key_warning')}
-          </div>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 text-xs bg-card border border-border rounded px-2 py-1.5 font-mono text-foreground break-all">
-              {lastCreatedSecret}
-            </code>
-            <button
-              className="text-xs rounded px-2.5 py-1 border border-brand/40 bg-transparent text-brand cursor-pointer hover:bg-brand/10 font-sans whitespace-nowrap"
-              onClick={handleCopy}
-            >
-              {copied ? t('common.copied') : t('common.copy')}
-            </button>
-          </div>
-          <button
-            className="self-start text-xs rounded px-2.5 py-1 border border-border bg-transparent text-muted-foreground cursor-pointer hover:bg-muted font-sans"
-            onClick={clearSecret}
-          >
-            {t('agents.acknowledged')}
-          </button>
-        </div>
+      {/* 생성/재발급 직후: 시크릿 + 온보딩 패키지 */}
+      {lastCreated && (
+        <AgentOnboardingPanel
+          agentId={lastCreated.agentId}
+          secret={lastCreated.secret}
+          connectionInfo={connectionInfo}
+          onDismiss={clearSecret}
+        />
       )}
 
       {/* 새 에이전트 생성 */}
@@ -136,9 +111,7 @@ export function AgentManagementTab() {
           >
             {creating ? t('agents.creating') : t('agents.generate_btn')}
           </button>
-          {createError && (
-            <div className="text-node-error text-xs">{createError}</div>
-          )}
+          {createError && <div className="text-node-error text-xs">{createError}</div>}
         </div>
       </div>
 
@@ -177,6 +150,14 @@ export function AgentManagementTab() {
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   className="text-xs rounded px-2 py-0.5 border border-border bg-transparent text-muted-foreground cursor-pointer hover:bg-muted font-sans"
+                  onClick={() =>
+                    setConnectAgentId((cur) => (cur === agent.agent_id ? null : agent.agent_id))
+                  }
+                >
+                  {t('onboarding.connect_btn')}
+                </button>
+                <button
+                  className="text-xs rounded px-2 py-0.5 border border-border bg-transparent text-muted-foreground cursor-pointer hover:bg-muted font-sans"
                   onClick={() => handleReissue(agent.id)}
                 >
                   {t('agents.reissue')}
@@ -188,6 +169,13 @@ export function AgentManagementTab() {
                   {agent.is_active ? t('agents.deactivate') : t('agents.activate')}
                 </button>
               </div>
+              {connectAgentId === agent.agent_id && (
+                <AgentOnboardingPanel
+                  agentId={agent.agent_id}
+                  connectionInfo={connectionInfo}
+                  onDismiss={() => setConnectAgentId(null)}
+                />
+              )}
               {reissueErrors[agent.id] && (
                 <div className="text-node-error text-xs">{reissueErrors[agent.id]}</div>
               )}
