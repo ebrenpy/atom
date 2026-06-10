@@ -1,5 +1,5 @@
 import { request } from './request';
-import type { Agent, User, UserRole } from './types';
+import type { Agent, User, UserRole, ConnectionInfo } from './types';
 
 export const configApi = {
   listUsers(): Promise<User[]> {
@@ -22,7 +22,7 @@ export const configApi = {
     return request('/api/config/agents', { method: 'POST', body: JSON.stringify(body) });
   },
 
-  reissueSecret(id: string): Promise<{ secret: string }> {
+  reissueSecret(id: string): Promise<Agent & { secret: string }> {
     return request(`/api/config/agents/${id}/reissue`, { method: 'POST' });
   },
 
@@ -52,5 +52,9 @@ export const configApi = {
     deprecatedFileExists: boolean;
   }> {
     return request('/api/config/db-info');
+  },
+
+  getConnectionInfo(): Promise<ConnectionInfo> {
+    return request('/api/config/connection-info');
   },
 };

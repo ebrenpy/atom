@@ -17,6 +17,11 @@ export interface Agent {
   created_at: string;
 }
 
+export interface ConnectionInfo {
+  mcpUrl: string;
+  headerName: string;
+}
+
 export interface TreeNodeData {
   id: string;
   card_id: string;

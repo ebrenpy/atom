@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
-import { configApi, type User, type Agent, type UserRole } from '../api/client';
+import { configApi, type User, type Agent, type UserRole, type ConnectionInfo } from '../api/client';
 
 export function useConfig() {
   const [users, setUsers] = useState<User[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [lastCreatedSecret, setLastCreatedSecret] = useState<string | null>(null);
+  const [lastCreated, setLastCreated] = useState<{ agentId: string; secret: string } | null>(null);
+  const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -20,8 +21,12 @@ export function useConfig() {
   const loadAgents = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await configApi.listAgents();
+      const [data, conn] = await Promise.all([
+        configApi.listAgents(),
+        configApi.getConnectionInfo().catch(() => null),
+      ]);
       setAgents(data);
+      setConnectionInfo(conn);
     } finally {
       setLoading(false);
     }
@@ -48,7 +53,7 @@ export function useConfig() {
   const createAgent = useCallback(
     async (input: { agent_id: string; display_name?: string }) => {
       const result = await configApi.createAgent(input);
-      setLastCreatedSecret(result.secret ?? null);
+      setLastCreated(result.secret ? { agentId: result.agent_id, secret: result.secret } : null);
       await loadAgents();
     },
     [loadAgents]
@@ -56,7 +61,7 @@ export function useConfig() {
 
   const reissueSecret = useCallback(async (id: string) => {
     const result = await configApi.reissueSecret(id);
-    setLastCreatedSecret(result.secret ?? null);
+    setLastCreated({ agentId: result.agent_id, secret: result.secret });
   }, []);
 
   const updateAgent = useCallback(
@@ -67,13 +72,14 @@ export function useConfig() {
     [loadAgents]
   );
 
-  const clearSecret = useCallback(() => setLastCreatedSecret(null), []);
+  const clearSecret = useCallback(() => setLastCreated(null), []);
 
   return {
     users,
     agents,
     loading,
-    lastCreatedSecret,
+    lastCreated,
+    connectionInfo,
     clearSecret,
     loadUsers,
     loadAgents,
