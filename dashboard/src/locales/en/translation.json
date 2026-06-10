@@ -64,6 +64,16 @@
     "revoke_confirm": "Revoke API key \"{{name}}\"?",
     "new_key_warning": "API Secret — shown only once. Store it safely."
   },
+  "onboarding": {
+    "panel_title": "Onboarding package — {{agent}}",
+    "tab_connect": "Connect",
+    "tab_prompt": "Session prompt",
+    "client_label": "Client:",
+    "connect_btn": "Connect",
+    "prompt_intro_hint": "Paste this into your AI's session/system prompt. It loads the real instructions from atom's onboarding card.",
+    "connect_hint": "Could not load the MCP URL — fill in <mcp-url> manually.",
+    "secret_missing_hint": "Secret is shown only once. Reissue to embed a fresh secret in these snippets."
+  },
   "credentials": {
     "title": "External Auth",
     "desc": "Enter credentials for external reference (unfurl) lookups. Stored in browser, never sent to server.",

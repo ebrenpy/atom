@@ -64,6 +64,16 @@
     "revoke_confirm": "\"{{name}}\" API 키를 폐기하시겠습니까?",
     "new_key_warning": "API 시크릿 — 지금만 표시됩니다. 안전한 곳에 저장하세요."
   },
+  "onboarding": {
+    "panel_title": "온보딩 패키지 — {{agent}}",
+    "tab_connect": "연결 설정",
+    "tab_prompt": "세션 프롬프트",
+    "client_label": "클라이언트:",
+    "connect_btn": "연결",
+    "prompt_intro_hint": "AI의 세션/시스템 프롬프트에 붙여넣으세요. 실제 지침은 atom의 온보딩 카드에서 로드됩니다.",
+    "connect_hint": "MCP URL을 불러오지 못했습니다 — <mcp-url>을 직접 입력하세요.",
+    "secret_missing_hint": "시크릿은 1회만 표시됩니다. 스니펫에 새 시크릿을 넣으려면 재발급하세요."
+  },
   "credentials": {
     "title": "외부 참조 인증",
     "desc": "외부 참조(unfurl) 조회 시 사용할 인증 정보를 입력합니다. 브라우저에 저장되며 서버로 전송되지 않습니다.",
