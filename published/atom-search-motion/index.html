@@ -693,7 +693,7 @@
         return error;
       }
 
-      async function getJson(path, signal) {
+      async function getJson(path, signal, readJevErrorEnvelope) {
         const response = await fetch(API_BASE_URL + path, {
           method: "GET",
           credentials: "include",
@@ -701,8 +701,32 @@
           headers: { Accept: "application/json" },
           signal: signal,
         });
-        if (!response.ok) throw errorStatus(response.status);
+        if (!response.ok) {
+          const error = errorStatus(response.status);
+          if (readJevErrorEnvelope) {
+            try {
+              const body = await response.json();
+              const detail = body && typeof body === "object" && body.error && typeof body.error === "object"
+                ? body.error
+                : null;
+              if (detail && typeof detail.code === "string") error.code = detail.code;
+            } catch { /* keep the HTTP status when the error body is not JSON */ }
+          }
+          throw error;
+        }
         return response.json();
+      }
+
+      function jevErrorMessage(error) {
+        const messages = {
+          JEV_NOT_CONFIGURED: "Jev 검색을 사용할 수 없습니다.",
+          JEV_UPSTREAM_AUTH: "Jev 검색 인증에 실패했습니다.",
+          JEV_SEARCH_BUSY: "Jev 검색이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.",
+          CANDIDATE_LIMIT: "검색 범위가 커서 일부만 확인했습니다. 검색 범위를 좁혀 주세요.",
+          RUN_TIME_LIMIT: "검색 시간이 길어 일부 범위는 확인하지 못했습니다.",
+          JEV_UPSTREAM_UNAVAILABLE: "Jev 검색 서비스에 연결할 수 없습니다.",
+        };
+        return messages[error && error.code] || "Jev 검색을 완료하지 못했습니다.";
       }
 
       function authErrorMessage(code) {
@@ -1192,13 +1216,24 @@
 
         const params = new URLSearchParams();
         params.set("q", query);
+        params.set("engine", "jev");
         try {
-          const results = await getJson("/search?" + params.toString(), controller.signal);
+          const response = await getJson("/search?" + params.toString(), controller.signal, true);
           if (thisVersion !== searchVersion || controller.signal.aborted) return;
-          if (!Array.isArray(results)) throw new Error("invalid-search-response");
+          if (!response || response.engine !== "jev" || !Array.isArray(response.results) || !Array.isArray(response.trace && response.trace.steps)) {
+            throw new Error("invalid-search-response");
+          }
+          if (response.status === "error") {
+            const error = new Error("jev-search-failed");
+            error.code = response.error && response.error.code;
+            throw error;
+          }
           activeSearch = null;
           cancelButton.hidden = true;
-          renderResults(results);
+          renderResults(response.results);
+          if (response.status === "limited" || response.complete === false) {
+            setLiveStatus("일부 범위만 확인했습니다. 검색 범위를 좁혀 보세요.", "error");
+          }
         } catch (error) {
           if (controller.signal.aborted || thisVersion !== searchVersion) return;
           activeSearch = null;
@@ -1214,7 +1249,7 @@
             return;
           }
           updateQueryState("", false);
-          setLiveStatus("검색을 완료하지 못했습니다.", "error");
+          setLiveStatus(jevErrorMessage(error), "error");
           retrySearchButton.hidden = false;
         }
       }
