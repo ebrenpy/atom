@@ -15,6 +15,7 @@ import { systemRoutes } from "./routes/system.js";
 import { authMiddleware } from "./middleware/auth.js";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import { createPageAccessCorsOptions } from "./page_access.js";
 import { runMigrations, getDb } from "../db/client.js";
 import { config } from "dotenv";
 import { loadAdapters } from "../unfurl/loader.js";
@@ -30,11 +31,7 @@ config({ path: path.join(__dirname, "../../.env"), override: true });
 const app = Fastify({ logger: true });
 
 const frontendUrl = process.env["FRONTEND_URL"];
-app.register(cors, {
-  origin: frontendUrl ? [frontendUrl] : true,
-  credentials: true,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-});
+app.register(cors, createPageAccessCorsOptions(frontendUrl));
 app.register(cookie);
 
 // Version info — no auth required

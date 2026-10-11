@@ -6,11 +6,15 @@ import { getDb } from '../../db/client.js';
 import {
   JWT_COOKIE_NAME,
   STATE_COOKIE_NAME,
+  ATOM_SEARCH_MOTION_FRONTEND_URL,
+  ATOM_SEARCH_MOTION_RETURN_TO,
+  ATOM_SEARCH_MOTION_SUCCESS_URL,
   buildBypassAuthStatus,
   buildGoogleAuthRedirectUrl,
   buildSlackAuthRedirectUrl,
   getProviderAvailability,
   getStateCookieOptions,
+  isAtomSearchMotionState,
 } from './auth_helpers.js';
 import type { AuthCallbackDeps } from './auth_callback_handlers.js';
 import { handleGoogleCallback, handleSlackCallback } from './auth_callback_handlers.js';
@@ -46,32 +50,48 @@ export function createAuthRoutes(deps: AuthRoutesDeps = defaultAuthRoutesDeps): 
     // ── Google OAuth routes ───────────────────────────────────────────────────
 
     // GET /api/auth/google — redirect to Google OAuth
-    app.get('/api/auth/google', async (_req, reply) => {
-      if (!googleClientId) {
-        return reply.code(503).send({ error: 'Google auth not configured' });
-      }
+    app.get<{ Querystring: { return_to?: string | string[] } }>(
+      '/api/auth/google',
+      async (req, reply) => {
+        const returnTo = req.query.return_to;
+        if (Array.isArray(returnTo) || (returnTo !== undefined && returnTo !== ATOM_SEARCH_MOTION_RETURN_TO)) {
+          return reply.code(400).send({ error: 'Invalid return_to' });
+        }
 
-      const state = crypto.randomBytes(16).toString('hex');
-      reply.setCookie(STATE_COOKIE_NAME, state, getStateCookieOptions());
+        if (!googleClientId) {
+          return reply.code(503).send({ error: 'Google auth not configured' });
+        }
 
-      return reply.redirect(buildGoogleAuthRedirectUrl({
-        clientId: googleClientId,
-        callbackUrl: googleCallbackUrl,
-        state,
-      }));
-    });
+        const nonce = crypto.randomBytes(16).toString('hex');
+        const state = returnTo ? nonce + '.' + ATOM_SEARCH_MOTION_RETURN_TO : nonce;
+        reply.setCookie(STATE_COOKIE_NAME, state, getStateCookieOptions());
+
+        return reply.redirect(buildGoogleAuthRedirectUrl({
+          clientId: googleClientId,
+          callbackUrl: googleCallbackUrl,
+          state,
+        }));
+      },
+    );
 
     // GET /api/auth/google/callback
     app.get<{ Querystring: { code?: string; state?: string; error?: string } }>(
       '/api/auth/google/callback',
       async (req, reply) => {
         const { code, state, error } = req.query;
+        const storedState = req.cookies[STATE_COOKIE_NAME];
+        const motionReturn = isAtomSearchMotionState(state) && storedState === state;
+
+        if (motionReturn && (error || !code)) {
+          reply.clearCookie(STATE_COOKIE_NAME, { path: '/' });
+          const authError = error ? 'google_error' : 'missing_code';
+          return reply.redirect(ATOM_SEARCH_MOTION_FRONTEND_URL + '/?auth_error=' + authError);
+        }
 
         if (error || !code || !state) {
           return reply.redirect(`${frontendUrl}/?auth_error=1`);
         }
 
-        const storedState = req.cookies[STATE_COOKIE_NAME];
         reply.clearCookie(STATE_COOKIE_NAME, { path: '/' });
 
         if (!storedState || storedState !== state) {
@@ -81,7 +101,8 @@ export function createAuthRoutes(deps: AuthRoutesDeps = defaultAuthRoutesDeps): 
         return handleGoogleCallback({
           deps,
           reply,
-          frontendUrl,
+          frontendUrl: motionReturn ? ATOM_SEARCH_MOTION_FRONTEND_URL : frontendUrl,
+          successRedirectUrl: motionReturn ? ATOM_SEARCH_MOTION_SUCCESS_URL : undefined,
           jwtSecret,
           code,
           googleClientId: googleClientId!,

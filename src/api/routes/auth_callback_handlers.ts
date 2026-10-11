@@ -26,6 +26,7 @@ export type AuthCallbackDeps = {
 async function issueJwtAndRedirect(input: {
   reply: FastifyReply;
   frontendUrl: string;
+  successRedirectUrl?: string;
   jwtSecret: Uint8Array;
   dbUser: Pick<User, 'id' | 'role'>;
   email: string;
@@ -44,13 +45,14 @@ async function issueJwtAndRedirect(input: {
 
   input.reply.setCookie(JWT_COOKIE_NAME, token, getJwtCookieOptions(process.env['NODE_ENV']));
 
-  return input.reply.redirect(input.frontendUrl || '/');
+  return input.reply.redirect(input.successRedirectUrl ?? (input.frontendUrl || '/'));
 }
 
 export async function handleGoogleCallback(input: {
   deps: AuthCallbackDeps;
   reply: FastifyReply;
   frontendUrl: string;
+  successRedirectUrl?: string;
   jwtSecret: Uint8Array;
   code: string;
   googleClientId: string;
@@ -95,6 +97,7 @@ export async function handleGoogleCallback(input: {
   return issueJwtAndRedirect({
     reply: input.reply,
     frontendUrl: input.frontendUrl,
+    successRedirectUrl: input.successRedirectUrl,
     jwtSecret: input.jwtSecret,
     dbUser,
     email: user.email,

@@ -15,6 +15,12 @@ import {
   findSetCookieHeader,
   getSingleHeaderValue,
   makeAuthApp,
+  makeFakeAuthDeps,
+  makeInjectedAuthApp,
+  configureGoogleCallbackEnv,
+  googleTokenResponse,
+  googleUserinfoResponse,
+  makeUser,
   restoreAuthEnv,
   restoreAuthGlobals,
 } from "./auth-route-test-utils.js";
@@ -182,6 +188,106 @@ describe("auth route safety boundaries", () => {
 
     expect(response.statusCode).toBe(503);
     expect(response.json()).toEqual({ error: "Google auth not configured" });
+    await app.close();
+  });
+
+  it("GET /api/auth/google binds the fixed motion-page selector into state and its cookie", async () => {
+    process.env["GOOGLE_CLIENT_ID"] = "google-client";
+    process.env["GOOGLE_CALLBACK_URL"] = "https://atom.example/api/auth/google/callback";
+    const app = await makeAuthApp();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/auth/google?return_to=atom-search-motion",
+    });
+    const location = new URL(getSingleHeaderValue(response.headers.location));
+    const state = location.searchParams.get("state") ?? "";
+    const stateCookie = findSetCookieHeader(response.headers["set-cookie"], STATE_COOKIE_NAME);
+
+    expect(response.statusCode).toBe(302);
+    expect(state).toMatch(/^[a-f0-9]{32}\.atom-search-motion$/);
+    expect(extractCookieValue(stateCookie, STATE_COOKIE_NAME)).toBe(state);
+    expect(stateCookie).toContain("HttpOnly");
+    expect(stateCookie).toContain("SameSite=Lax");
+    await app.close();
+  });
+
+  it("GET /api/auth/google rejects arbitrary, array, and duplicate return selectors before setting state", async () => {
+    process.env["GOOGLE_CLIENT_ID"] = "google-client";
+    const app = await makeAuthApp();
+
+    for (const url of [
+      "/api/auth/google?return_to=https%3A%2F%2Fevil.example",
+      "/api/auth/google?return_to=atom-search-motion&return_to=atom-search-motion",
+    ]) {
+      const response = await app.inject({ method: "GET", url });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.headers.location).toBeUndefined();
+      expect(response.headers["set-cookie"]).toBeUndefined();
+    }
+    await app.close();
+  });
+
+  it("GET /api/auth/google/callback sends valid motion state to the fixed Pages error URL", async () => {
+    configureGoogleCallbackEnv();
+    process.env["FRONTEND_URL"] = "https://dashboard.example";
+    const state = `${"a".repeat(32)}.atom-search-motion`;
+    const app = await makeAuthApp();
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/auth/google/callback?state=${state}&error=access_denied`,
+      headers: { cookie: `${STATE_COOKIE_NAME}=${state}` },
+    });
+
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe(
+      "https://pages.eiaserinnys.me/d/atom-search-motion/?auth_error=google_error",
+    );
+    expect(getSingleHeaderValue(response.headers["set-cookie"])).toContain(`${STATE_COOKIE_NAME}=`);
+    await app.close();
+  });
+
+  it("GET /api/auth/google/callback does not route a motion state without a matching cookie to Pages", async () => {
+    configureGoogleCallbackEnv();
+    process.env["FRONTEND_URL"] = "https://dashboard.example";
+    const state = `${"b".repeat(32)}.atom-search-motion`;
+    const harness = makeFakeAuthDeps({ fetchResponses: [] });
+    const app = await makeInjectedAuthApp(harness.deps);
+
+    for (const cookie of [undefined, `${STATE_COOKIE_NAME}=other-state`]) {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/auth/google/callback?code=code-1&state=${state}`,
+        headers: cookie ? { cookie } : {},
+      });
+
+      expect(response.statusCode).toBe(302);
+      expect(response.headers.location).toBe("https://dashboard.example/?auth_error=invalid_state");
+    }
+    expect(harness.fetchCalls).toHaveLength(0);
+    await app.close();
+  });
+
+  it("GET /api/auth/google/callback keeps arbitrary callback selectors out of the redirect destination", async () => {
+    configureGoogleCallbackEnv();
+    process.env["FRONTEND_URL"] = "https://dashboard.example";
+    const state = `${"c".repeat(32)}.atom-search-motion`;
+    const harness = makeFakeAuthDeps({
+      users: { "user@example.com": makeUser({ email: "user@example.com" }) },
+      fetchResponses: [googleTokenResponse(), googleUserinfoResponse("user@example.com", "User")],
+    });
+    const app = await makeInjectedAuthApp(harness.deps);
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/auth/google/callback?code=code-1&state=${state}&return_to=https%3A%2F%2Fevil.example`,
+      headers: { cookie: `${STATE_COOKIE_NAME}=${state}` },
+    });
+
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe("https://pages.eiaserinnys.me/d/atom-search-motion/");
     await app.close();
   });
 
