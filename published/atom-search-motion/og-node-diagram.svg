@@ -24,8 +24,16 @@
     .accent-dot { fill: var(--apple-accent); }
     .soft-dot { fill: var(--apple-accent); opacity: .28; }
     .content-line { fill: var(--apple-label-secondary); opacity: .52; stroke: none; }
+    .service-title {
+      fill: var(--apple-label);
+      font-family: "SF Pro Display", "Apple SD Gothic Neo", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 48px;
+      font-weight: 650;
+      letter-spacing: -1.5px;
+    }
   </style>
   <rect class="background" width="1200" height="630" rx="36"/>
+  <text class="service-title" x="96" y="166">atom 검색</text>
   <rect class="shadow" x="104" y="246" width="248" height="140" rx="28"/>
   <rect class="shadow" x="702" y="118" width="374" height="112" rx="26"/>
   <rect class="shadow" x="702" y="260" width="374" height="112" rx="26"/>

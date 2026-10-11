@@ -11,9 +11,19 @@
   <meta property="og:description" content="검색 결과가 노드로 펼쳐지는 공간">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ko_KR">
-  <meta property="og:image" content="https://PUBLIC_R2_URL_REPLACE_AFTER_UPLOAD/atom-search-motion-og.png">
+  <meta property="og:site_name" content="atom">
+  <meta property="og:url" content="https://pages.eiaserinnys.me/d/atom-search-motion/">
+  <meta property="og:image" content="https://pub-236dc9dc170e487faec4c8b5e2d084c6.r2.dev/pages/atom-search-motion/fc793002d99d/og-node-diagram.png">
+  <meta property="og:image:secure_url" content="https://pub-236dc9dc170e487faec4c8b5e2d084c6.r2.dev/pages/atom-search-motion/fc793002d99d/og-node-diagram.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="atom 검색 결과가 노드로 펼쳐지는 다이어그램">
   <meta name="twitter:card" content="summary_large_image">
-  <!-- Replace og:image with the public immutable R2 URL after uploading og-node-diagram.png. -->
+  <meta name="twitter:title" content="atom 검색">
+  <meta name="twitter:description" content="검색 결과가 노드로 펼쳐지는 공간">
+  <meta name="twitter:image" content="https://pub-236dc9dc170e487faec4c8b5e2d084c6.r2.dev/pages/atom-search-motion/fc793002d99d/og-node-diagram.png">
+  <meta name="twitter:image:alt" content="atom 검색 결과가 노드로 펼쳐지는 다이어그램">
   <style>
     :root {
       color-scheme: light;
@@ -367,7 +377,7 @@
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--apple-space-4);
       min-width: 0;
       margin: 0;
@@ -525,7 +535,10 @@
       }
       .workbench { grid-template-columns: minmax(0, 1fr); }
       .network { grid-template-columns: minmax(0, 1fr); row-gap: var(--apple-space-6); }
-      .result-list { grid-template-columns: minmax(0, 1fr); }
+      .result-list {
+        grid-template-columns: minmax(0, 1fr);
+        margin-inline-start: var(--apple-space-6);
+      }
     }
 
     @media (max-width: 36rem) {
@@ -871,6 +884,13 @@
         };
       }
 
+      function tokenLengthPx(name) {
+        const token = getComputedStyle(root).getPropertyValue(name).trim();
+        const value = Number.parseFloat(token);
+        const rootFontSize = Number.parseFloat(getComputedStyle(root).fontSize);
+        return token.endsWith("rem") ? value * rootFontSize : value;
+      }
+
       function measureAndDrawEdges() {
         if (workbench.hidden || queryNode.hidden || resultList.children.length === 0) {
           connections.replaceChildren();
@@ -888,13 +908,19 @@
         }));
 
         const mobile = mobileLayout.matches;
+        const corridorWidth = mobile ? tokenLengthPx("--apple-space-6") : 0;
+        const corridorX = mobile
+          ? Math.min(queryEdge.left + corridorWidth / 2, edgeLayout[0].rect.left - corridorWidth / 2)
+          : 0;
+        const cornerRadius = mobile ? tokenLengthPx("--apple-space-2") : 0;
         const children = edgeLayout.map((entry) => {
-          const endX = mobile ? entry.rect.centerX : entry.rect.left;
-          const endY = mobile ? entry.rect.top : entry.rect.centerY;
-          const startX = mobile ? queryEdge.centerX : queryEdge.right;
+          const endX = entry.rect.left;
+          const endY = entry.rect.centerY;
+          const startX = mobile ? corridorX : queryEdge.right;
           const startY = mobile ? queryEdge.bottom : queryEdge.centerY;
           const distance = mobile ? Math.max(0, endY - startY) : Math.max(0, endX - startX);
           const bend = Math.max(0, Math.min(72, distance * 0.3));
+          const radius = Math.min(cornerRadius, distance / 2);
           const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
           path.setAttribute("class", "connection");
           path.setAttribute("data-card-id", entry.cardId);
@@ -902,7 +928,7 @@
             path.classList.add("is-selected");
           }
           const d = mobile
-            ? "M " + startX + " " + startY + " C " + startX + " " + (startY + bend) + ", " + endX + " " + (endY - bend) + ", " + endX + " " + endY
+            ? "M " + startX + " " + startY + " L " + corridorX + " " + (endY - radius) + " Q " + corridorX + " " + endY + " " + (corridorX + radius) + " " + endY + " L " + endX + " " + endY
             : "M " + startX + " " + startY + " C " + (startX + bend) + " " + startY + ", " + (endX - bend) + " " + endY + ", " + endX + " " + endY;
           path.setAttribute("d", d);
           return path;
