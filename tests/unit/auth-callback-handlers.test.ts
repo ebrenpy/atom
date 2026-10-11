@@ -46,6 +46,29 @@ describe("auth callback handlers", () => {
     await app.close();
   });
 
+  it("GET /api/auth/google/callback returns a fixed Pages error URL for a validated motion state", async () => {
+    configureGoogleCallbackEnv();
+    process.env["FRONTEND_URL"] = "https://dashboard.example";
+    const state = "d".repeat(32) + ".atom-search-motion";
+    const harness = makeFakeAuthDeps({
+      fetchResponses: [jsonResponse(false, { error: "invalid_grant" })],
+    });
+    const app = await makeInjectedAuthApp(harness.deps);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/auth/google/callback?code=code-1&state=" + state,
+      headers: { cookie: STATE_COOKIE_NAME + "=" + state },
+    });
+
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe(
+      "https://pages.eiaserinnys.me/d/atom-search-motion/?auth_error=token_exchange",
+    );
+    expect(harness.fetchCalls.map((call) => call.url)).toEqual(["https://oauth2.googleapis.com/token"]);
+    await app.close();
+  });
+
   it("GET /api/auth/google/callback redirects userinfo when the userinfo fetch fails", async () => {
     configureGoogleCallbackEnv();
     process.env["FRONTEND_URL"] = "https://dashboard.example";

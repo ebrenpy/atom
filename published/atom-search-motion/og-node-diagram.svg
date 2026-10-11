@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">atom 검색</title>
+  <desc id="description">검색어 노드가 여러 검색 결과 노드와 연결된 일반 다이어그램</desc>
+  <style>
+    :root {
+      --apple-bg: #f5f5f7;
+      --apple-surface: #ffffff;
+      --apple-surface-muted: #f2f2f7;
+      --apple-label: #1d1d1f;
+      --apple-label-secondary: #6e6e73;
+      --apple-separator: rgb(0 0 0 / 12%);
+      --apple-separator-strong: rgb(0 0 0 / 24%);
+      --apple-accent: #0071e3;
+      --apple-accent-soft: rgb(0 113 227 / 10%);
+      --apple-shadow: rgb(0 0 0 / 7%);
+    }
+    .background { fill: var(--apple-bg); }
+    .surface { fill: var(--apple-surface); stroke: var(--apple-separator); }
+    .query { fill: var(--apple-accent-soft); stroke: var(--apple-accent); }
+    .result { fill: var(--apple-surface-muted); stroke: var(--apple-separator-strong); }
+    .edge { fill: none; stroke: var(--apple-accent); stroke-linecap: round; opacity: .32; }
+    .selected-edge { opacity: .85; }
+    .shadow { fill: var(--apple-shadow); }
+    .accent-dot { fill: var(--apple-accent); }
+    .soft-dot { fill: var(--apple-accent); opacity: .28; }
+    .content-line { fill: var(--apple-label-secondary); opacity: .52; stroke: none; }
+    .service-title {
+      fill: var(--apple-label);
+      font-family: "SF Pro Display", "Apple SD Gothic Neo", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 48px;
+      font-weight: 650;
+      letter-spacing: -1.5px;
+    }
+  </style>
+  <rect class="background" width="1200" height="630" rx="36"/>
+  <text class="service-title" x="96" y="166">atom 검색</text>
+  <rect class="shadow" x="104" y="246" width="248" height="140" rx="28"/>
+  <rect class="shadow" x="702" y="118" width="374" height="112" rx="26"/>
+  <rect class="shadow" x="702" y="260" width="374" height="112" rx="26"/>
+  <rect class="shadow" x="702" y="402" width="374" height="112" rx="26"/>
+  <path class="edge" stroke-width="6" d="M 352 316 C 468 316 508 174 702 174"/>
+  <path class="edge selected-edge" stroke-width="8" d="M 352 316 C 490 316 516 316 702 316"/>
+  <path class="edge" stroke-width="6" d="M 352 316 C 468 316 508 458 702 458"/>
+  <rect class="surface query" x="96" y="232" width="248" height="140" rx="28" stroke-width="3"/>
+  <circle class="accent-dot" cx="142" cy="278" r="10"/>
+  <circle class="soft-dot" cx="171" cy="278" r="7"/>
+  <rect class="surface result" x="694" y="104" width="374" height="112" rx="26" stroke-width="2"/>
+  <rect class="surface result" x="694" y="246" width="374" height="112" rx="26" stroke-width="3"/>
+  <rect class="surface result" x="694" y="388" width="374" height="112" rx="26" stroke-width="2"/>
+  <circle class="accent-dot" cx="744" cy="160" r="12"/>
+  <circle class="soft-dot" cx="744" cy="302" r="12"/>
+  <circle class="soft-dot" cx="744" cy="444" r="12"/>
+  <rect class="content-line" x="786" y="146" width="214" height="10" rx="5"/>
+  <rect class="content-line" x="786" y="174" width="152" height="8" rx="4"/>
+  <rect class="content-line" x="786" y="288" width="238" height="10" rx="5"/>
+  <rect class="content-line" x="786" y="316" width="174" height="8" rx="4"/>
+  <rect class="content-line" x="786" y="430" width="196" height="10" rx="5"/>
+  <rect class="content-line" x="786" y="458" width="148" height="8" rx="4"/>
+</svg>

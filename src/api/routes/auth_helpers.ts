@@ -9,6 +9,13 @@ export const SLACK_IDENTITY_URL = 'https://slack.com/api/users.identity';
 export const JWT_COOKIE_NAME = 'atom_auth';
 export const STATE_COOKIE_NAME = 'atom_oauth_state';
 export const JWT_EXPIRY_SECONDS = 7 * 24 * 60 * 60;
+export const ATOM_SEARCH_MOTION_RETURN_TO = 'atom-search-motion';
+export const ATOM_SEARCH_MOTION_FRONTEND_URL = 'https://pages.eiaserinnys.me/d/atom-search-motion';
+export const ATOM_SEARCH_MOTION_SUCCESS_URL = ATOM_SEARCH_MOTION_FRONTEND_URL + '/';
+
+export function isAtomSearchMotionState(state: unknown): state is string {
+  return typeof state === 'string' && /^[a-f0-9]{32}\.atom-search-motion$/.test(state);
+}
 
 export type ProviderAvailability = {
   google: boolean;

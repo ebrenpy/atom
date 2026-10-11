@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="ko" data-design="apple">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <title>atom 검색</title>
+  <meta name="description" content="검색 결과가 노드로 펼쳐지는 공간">
+  <meta property="og:title" content="atom 검색">
+  <meta property="og:description" content="검색 결과가 노드로 펼쳐지는 공간">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:site_name" content="atom">
+  <meta property="og:url" content="https://pages.eiaserinnys.me/d/atom-search-motion/">
+  <meta property="og:image" content="https://pub-236dc9dc170e487faec4c8b5e2d084c6.r2.dev/pages/atom-search-motion/fc793002d99d/og-node-diagram.png">
+  <meta property="og:image:secure_url" content="https://pub-236dc9dc170e487faec4c8b5e2d084c6.r2.dev/pages/atom-search-motion/fc793002d99d/og-node-diagram.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="atom 검색 결과가 노드로 펼쳐지는 다이어그램">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="atom 검색">
+  <meta name="twitter:description" content="검색 결과가 노드로 펼쳐지는 공간">
+  <meta name="twitter:image" content="https://pub-236dc9dc170e487faec4c8b5e2d084c6.r2.dev/pages/atom-search-motion/fc793002d99d/og-node-diagram.png">
+  <meta name="twitter:image:alt" content="atom 검색 결과가 노드로 펼쳐지는 다이어그램">
+  <style>
+    :root {
+      color-scheme: light;
+      --apple-bg: #f5f5f7;
+      --apple-surface: #ffffff;
+      --apple-surface-muted: #f2f2f7;
+      --apple-material: rgb(255 255 255 / 72%);
+      --apple-label: #1d1d1f;
+      --apple-label-secondary: #6e6e73;
+      --apple-label-tertiary: #86868b;
+      --apple-label-inverse: #ffffff;
+      --apple-separator: rgb(0 0 0 / 12%);
+      --apple-separator-strong: rgb(0 0 0 / 24%);
+      --apple-accent: #0071e3;
+      --apple-accent-hover: #0077ed;
+      --apple-accent-soft: rgb(0 113 227 / 10%);
+      --apple-focus: rgb(0 113 227 / 42%);
+      --apple-warning: #9a6700;
+      --apple-font:
+        "Pretendard Variable",
+        Pretendard,
+        -apple-system,
+        BlinkMacSystemFont,
+        system-ui,
+        "Apple SD Gothic Neo",
+        "Segoe UI",
+        "Malgun Gothic",
+        sans-serif;
+      --apple-title-1: clamp(2rem, 5vw, 3rem);
+      --apple-title-2: 1.5rem;
+      --apple-body: 1.0625rem;
+      --apple-reading: 1.125rem;
+      --apple-content: 0.9375rem;
+      --apple-small: 0.875rem;
+      --apple-caption: 0.8125rem;
+      --apple-space-1: 0.25rem;
+      --apple-space-2: 0.5rem;
+      --apple-space-3: 0.75rem;
+      --apple-space-4: 1rem;
+      --apple-space-6: 1.5rem;
+      --apple-space-8: 2rem;
+      --apple-space-12: 3rem;
+      --apple-radius-control: 0.625rem;
+      --apple-radius-card: 1.125rem;
+      --apple-radius-panel: 1.5rem;
+      --apple-radius-pill: 999px;
+      --apple-shadow-low:
+        0 1px 2px rgb(0 0 0 / 6%),
+        0 4px 14px rgb(0 0 0 / 5%);
+      --apple-shadow-medium: 0 12px 40px rgb(0 0 0 / 12%);
+      --apple-blur: 1.25rem;
+      --apple-saturation: 180%;
+      --apple-content-width: 72rem;
+      --apple-control-height: 2.75rem;
+      --apple-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --apple-bg: #000000;
+      --apple-surface: #1d1d1f;
+      --apple-surface-muted: #2c2c2e;
+      --apple-material: rgb(28 28 30 / 72%);
+      --apple-label: #f5f5f7;
+      --apple-label-secondary: #a1a1a6;
+      --apple-label-tertiary: #8e8e93;
+      --apple-label-inverse: #1d1d1f;
+      --apple-separator: rgb(255 255 255 / 16%);
+      --apple-separator-strong: rgb(255 255 255 / 30%);
+      --apple-accent: #2997ff;
+      --apple-accent-hover: #40a9ff;
+      --apple-accent-soft: rgb(41 151 255 / 16%);
+      --apple-focus: rgb(41 151 255 / 52%);
+      --apple-warning: #ffd60a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --apple-bg: #000000;
+        --apple-surface: #1d1d1f;
+        --apple-surface-muted: #2c2c2e;
+        --apple-material: rgb(28 28 30 / 72%);
+        --apple-label: #f5f5f7;
+        --apple-label-secondary: #a1a1a6;
+        --apple-label-tertiary: #8e8e93;
+        --apple-label-inverse: #1d1d1f;
+        --apple-separator: rgb(255 255 255 / 16%);
+        --apple-separator-strong: rgb(255 255 255 / 30%);
+        --apple-accent: #2997ff;
+        --apple-accent-hover: #40a9ff;
+        --apple-accent-soft: rgb(41 151 255 / 16%);
+        --apple-focus: rgb(41 151 255 / 52%);
+        --apple-warning: #ffd60a;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      min-width: 20rem;
+      scroll-behavior: smooth;
+      background: var(--apple-bg);
+    }
+
+    body {
+      scrollbar-color: var(--apple-label-tertiary) transparent;
+      scrollbar-width: thin;
+    }
+
+    ::-webkit-scrollbar { width: var(--apple-space-2); height: var(--apple-space-2); }
+    ::-webkit-scrollbar-thumb { border-radius: var(--apple-radius-pill); background: var(--apple-label-tertiary); }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--apple-bg);
+      color: var(--apple-label);
+      font-family: var(--apple-font);
+      font-size: var(--apple-body);
+      font-optical-sizing: auto;
+      line-height: 1.53;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    button, input { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
+
+    :focus-visible {
+      outline: 0.125rem solid var(--apple-focus);
+      outline-offset: 0.1875rem;
+    }
+
+    .app-shell {
+      width: min(calc(100% - 2 * var(--apple-space-6)), var(--apple-content-width));
+      margin-inline: auto;
+      padding-block: var(--apple-space-8) var(--apple-space-12);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--apple-space-4);
+      margin-bottom: var(--apple-space-8);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: var(--apple-title-1);
+      font-weight: 750;
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: var(--apple-title-2);
+      font-weight: 700;
+      line-height: 1.22;
+      letter-spacing: -0.015em;
+    }
+
+    .auth-actions,
+    .search-actions,
+    .detail-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--apple-space-3);
+    }
+
+    .apple-button {
+      display: inline-flex;
+      min-height: var(--apple-control-height);
+      align-items: center;
+      justify-content: center;
+      padding-inline: var(--apple-space-4);
+      border: 0.0625rem solid transparent;
+      border-radius: var(--apple-radius-pill);
+      background: var(--apple-accent);
+      color: var(--apple-label-inverse);
+      font-size: var(--apple-body);
+      font-weight: 650;
+      line-height: 1.2;
+      text-decoration: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition:
+        transform 100ms ease-out,
+        background-color 180ms var(--apple-ease),
+        opacity 180ms linear;
+    }
+
+    .apple-button:hover { background: var(--apple-accent-hover); }
+    .apple-button:active { transform: scale(0.98); }
+    .apple-button:disabled { cursor: not-allowed; opacity: 0.52; }
+
+    .apple-button--secondary {
+      border-color: var(--apple-separator);
+      background: var(--apple-surface);
+      color: var(--apple-label);
+    }
+
+    .apple-button--secondary:hover { background: var(--apple-surface-muted); }
+
+    .search-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--apple-space-3);
+    }
+
+    .search-input {
+      width: 100%;
+      min-width: 0;
+      min-height: var(--apple-control-height);
+      padding: var(--apple-space-2) var(--apple-space-4);
+      border: 0.0625rem solid var(--apple-separator-strong);
+      border-radius: var(--apple-radius-control);
+      background: var(--apple-surface);
+      color: var(--apple-label);
+      font-size: var(--apple-body);
+      line-height: 1.35;
+    }
+
+    .search-input::placeholder { color: var(--apple-label-tertiary); opacity: 1; }
+    .search-input:disabled { opacity: 0.66; }
+
+    .search-feedback {
+      display: flex;
+      min-height: var(--apple-control-height);
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--apple-space-4);
+      margin-block: var(--apple-space-3) var(--apple-space-8);
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .apple-muted {
+      margin: 0;
+      color: var(--apple-label-secondary);
+      font-size: var(--apple-small);
+      line-height: 1.45;
+    }
+
+    .apple-muted[data-kind="error"] { color: var(--apple-warning); font-weight: 600; }
+    .auth-message { margin: 0; }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+      align-items: start;
+      gap: var(--apple-space-8);
+    }
+
+    .apple-diagram {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      padding: var(--apple-space-6);
+      border: 0.0625rem solid var(--apple-separator);
+      border-radius: var(--apple-radius-panel);
+      background: var(--apple-surface);
+      box-shadow: var(--apple-shadow-low);
+    }
+
+    .network {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+      align-items: center;
+      column-gap: var(--apple-space-8);
+      min-width: 0;
+    }
+
+    .connections {
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .connection {
+      fill: none;
+      stroke: var(--apple-accent);
+      stroke-width: 0.125rem;
+      stroke-linecap: round;
+      opacity: 0.28;
+      transition: opacity 160ms linear, stroke-width 160ms linear;
+    }
+
+    .connection.is-selected {
+      stroke-width: 0.1875rem;
+      opacity: 0.92;
+    }
+
+    .query-node {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+      padding: var(--apple-space-4);
+      border: 0.0625rem solid var(--apple-separator-strong);
+      border-radius: var(--apple-radius-card);
+      background: var(--apple-surface-muted);
+    }
+
+    .query-label,
+    .result-snippet,
+    .breadcrumb { margin: 0; }
+
+    .query-label {
+      margin-bottom: var(--apple-space-2);
+      color: var(--apple-label-secondary);
+      font-size: var(--apple-caption);
+      font-weight: 650;
+    }
+
+    .query-value {
+      overflow-wrap: anywhere;
+      font-size: var(--apple-body);
+      font-weight: 650;
+      line-height: 1.45;
+    }
+
+    .query-state {
+      display: flex;
+      min-height: var(--apple-control-height);
+      align-items: center;
+      gap: var(--apple-space-2);
+      margin-top: var(--apple-space-3);
+      color: var(--apple-label-secondary);
+      font-size: var(--apple-small);
+    }
+
+    .loading-mark {
+      width: var(--apple-space-3);
+      height: var(--apple-space-3);
+      flex: 0 0 auto;
+      border: 0.125rem solid var(--apple-separator-strong);
+      border-top-color: var(--apple-accent);
+      border-radius: var(--apple-radius-pill);
+      animation: search-spin 900ms linear infinite;
+    }
+
+    @keyframes search-spin { to { transform: rotate(360deg); } }
+
+    .result-list {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--apple-space-4);
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .result-item { min-width: 0; }
+
+    .result-node {
+      width: 100%;
+      min-width: 0;
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--apple-space-2);
+      padding: var(--apple-space-4);
+      border-color: var(--apple-separator);
+      border-radius: var(--apple-radius-card);
+      box-shadow: var(--apple-shadow-low);
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    .result-node:hover { border-color: var(--apple-accent); }
+
+    .result-node[aria-pressed="true"] {
+      border-color: var(--apple-accent);
+      background: var(--apple-accent-soft);
+      box-shadow: 0 0 0 0.0625rem var(--apple-accent);
+    }
+
+    .result-title {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      color: var(--apple-label);
+      font-size: var(--apple-body);
+      font-weight: 700;
+      line-height: 1.35;
+      text-overflow: ellipsis;
+    }
+
+    .breadcrumb {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 1;
+      color: var(--apple-label-secondary);
+      font-size: var(--apple-caption);
+      font-weight: 550;
+      line-height: 1.4;
+      text-overflow: ellipsis;
+    }
+
+    .result-snippet {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      color: var(--apple-label-secondary);
+      font-size: var(--apple-small);
+      font-weight: 400;
+      line-height: 1.45;
+      text-overflow: ellipsis;
+    }
+
+    .original-panel { min-width: 0; }
+    .original-panel:empty { min-height: 0; }
+
+    .apple-details {
+      border-top: 0.0625rem solid var(--apple-separator);
+      border-bottom: 0.0625rem solid var(--apple-separator);
+    }
+
+    .apple-details summary {
+      padding-block: var(--apple-space-4);
+      font-size: var(--apple-body);
+      font-weight: 700;
+      line-height: 1.35;
+      cursor: pointer;
+      overflow-wrap: anywhere;
+    }
+
+    .original-content {
+      padding-bottom: var(--apple-space-6);
+    }
+
+    .original-notice { margin-block: var(--apple-space-4); }
+
+    .detail-actions {
+      flex-wrap: wrap;
+      margin-bottom: var(--apple-space-6);
+    }
+
+    .original-body {
+      margin: 0;
+      color: var(--apple-label);
+      font-family: var(--apple-font);
+      font-size: var(--apple-reading);
+      line-height: 1.65;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: keep-all;
+    }
+
+    .empty-message {
+      margin: var(--apple-space-4) 0 0;
+      color: var(--apple-label-secondary);
+      font-size: var(--apple-small);
+    }
+
+    html[data-reduce-transparency="true"] .apple-material {
+      background: var(--apple-surface);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .apple-material {
+        background: var(--apple-surface);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+    }
+
+    @media (prefers-contrast: more) {
+      :root { --apple-separator: var(--apple-separator-strong); }
+      .apple-diagram, .query-node, .result-node {
+        background: var(--apple-surface);
+        box-shadow: none;
+      }
+    }
+
+    @media (forced-colors: active) {
+      .apple-button, .apple-diagram, .query-node, .result-node {
+        border: 0.0625rem solid CanvasText;
+        box-shadow: none;
+      }
+      .apple-button { background: ButtonFace; color: ButtonText; }
+      .query-node, .result-node { background: Canvas; color: CanvasText; }
+      .connection { stroke: LinkText; }
+      .query-label, .query-state, .result-snippet, .breadcrumb { color: CanvasText; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .apple-button, .connection { transition: none; }
+      .apple-button:active { transform: none; opacity: 0.72; }
+      .loading-mark { animation: none; border-top-color: var(--apple-accent); }
+    }
+
+    @media (max-width: 56rem) {
+      .app-shell {
+        width: min(calc(100% - 2 * var(--apple-space-4)), var(--apple-content-width));
+        padding-block-start: var(--apple-space-6);
+      }
+      .workbench { grid-template-columns: minmax(0, 1fr); }
+      .network { grid-template-columns: minmax(0, 1fr); row-gap: var(--apple-space-6); }
+      .result-list {
+        grid-template-columns: minmax(0, 1fr);
+        margin-inline-start: var(--apple-space-6);
+      }
+    }
+
+    @media (max-width: 36rem) {
+      .app-shell { width: calc(100% - 2 * var(--apple-space-4)); }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .auth-actions, .search-actions { width: 100%; }
+      .auth-actions .apple-button { flex: 1; }
+      .search-form { grid-template-columns: minmax(0, 1fr) auto; }
+      .search-form > .apple-button { padding-inline: var(--apple-space-3); }
+      .search-feedback { align-items: flex-start; }
+      .apple-diagram { padding: var(--apple-space-4); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <h1>atom 검색</h1>
+      <div class="auth-actions">
+        <p class="apple-muted auth-message" id="auth-message" role="alert" aria-live="assertive" hidden></p>
+        <a class="apple-button" id="login-link" href="https://atom.eiaserinnys.me/api/auth/google?return_to=atom-search-motion" hidden>Google로 로그인</a>
+        <button class="apple-button apple-button--secondary" id="retry-auth" type="button" hidden>다시 시도</button>
+      </div>
+    </header>
+
+    <form class="search-form" id="search-form">
+      <input
+        class="search-input"
+        id="search-input"
+        type="search"
+        name="q"
+        autocomplete="off"
+        enterkeyhint="search"
+        aria-label="atom 검색어"
+        placeholder="검색어"
+        disabled
+      >
+      <button class="apple-button" id="search-button" type="submit" disabled>검색</button>
+    </form>
+
+    <div class="search-feedback">
+      <p class="apple-muted" id="live-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      <div class="search-actions">
+        <button class="apple-button apple-button--secondary" id="cancel-search" type="button" hidden>취소</button>
+        <button class="apple-button apple-button--secondary" id="show-all" type="button" hidden>모두 보기</button>
+        <button class="apple-button apple-button--secondary" id="retry-search" type="button" hidden>다시 시도</button>
+      </div>
+    </div>
+
+    <section class="workbench" id="workbench" aria-label="검색 결과와 원문" hidden>
+      <div class="apple-diagram" id="diagram">
+        <div class="network" id="network">
+          <svg class="connections" id="connections" aria-hidden="true" focusable="false"></svg>
+          <div class="query-node" id="query-node" hidden>
+            <p class="query-label">검색어</p>
+            <div class="query-value" id="query-value"></div>
+            <div class="query-state" id="query-state" aria-hidden="true" hidden>
+              <span class="loading-mark" aria-hidden="true"></span>
+            </div>
+          </div>
+          <ol class="result-list" id="result-list" aria-label="실제 검색 결과"></ol>
+        </div>
+      </div>
+
+      <aside class="original-panel" id="original-panel" aria-label="선택한 카드 원문"></aside>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const API_BASE_URL = "https://atom.eiaserinnys.me";
+      const RETURN_SELECTOR = "atom-search-motion";
+      const root = document.documentElement;
+      const form = document.getElementById("search-form");
+      const input = document.getElementById("search-input");
+      const searchButton = document.getElementById("search-button");
+      const liveStatus = document.getElementById("live-status");
+      const authMessage = document.getElementById("auth-message");
+      const loginLink = document.getElementById("login-link");
+      const retryAuthButton = document.getElementById("retry-auth");
+      const cancelButton = document.getElementById("cancel-search");
+      const showAllButton = document.getElementById("show-all");
+      const retrySearchButton = document.getElementById("retry-search");
+      const workbench = document.getElementById("workbench");
+      const network = document.getElementById("network");
+      const connections = document.getElementById("connections");
+      const queryNode = document.getElementById("query-node");
+      const queryValue = document.getElementById("query-value");
+      const queryState = document.getElementById("query-state");
+      const resultList = document.getElementById("result-list");
+      const originalPanel = document.getElementById("original-panel");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const mobileLayout = window.matchMedia("(max-width: 56rem)");
+
+      loginLink.href = API_BASE_URL + "/api/auth/google?return_to=" + encodeURIComponent(RETURN_SELECTOR);
+
+      let authenticated = false;
+      let googleAvailable = false;
+      let composing = false;
+      let activeSearch = null;
+      let activeCardRequest = null;
+      let searchVersion = 0;
+      let cardVersion = 0;
+      let lastQuery = "";
+      let selectedButton = null;
+      let selectedResult = null;
+      let motionEntries = [];
+      let motionFrame = 0;
+      let edgeLayout = [];
+      let queryEdge = null;
+
+      function setLiveStatus(message, kind) {
+        liveStatus.textContent = message;
+        liveStatus.dataset.kind = kind || "normal";
+        liveStatus.classList.toggle("visually-hidden", message === "검색 결과가 펼쳐졌습니다.");
+      }
+
+      function setAuthMessage(message) {
+        authMessage.textContent = message || "";
+        authMessage.hidden = !message;
+      }
+
+      function showLogin() {
+        loginLink.hidden = authenticated || !googleAvailable;
+      }
+
+      function updateSearchAvailability() {
+        input.disabled = !authenticated;
+        searchButton.disabled = !authenticated;
+        showLogin();
+      }
+
+      function errorStatus(status) {
+        const error = new Error("request-failed");
+        error.status = status;
+        return error;
+      }
+
+      async function getJson(path, signal) {
+        const response = await fetch(API_BASE_URL + path, {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+          signal: signal,
+        });
+        if (!response.ok) throw errorStatus(response.status);
+        return response.json();
+      }
+
+      function authErrorMessage(code) {
+        const messages = {
+          "1": "Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요.",
+          google_error: "Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요.",
+          missing_code: "Google 인증 응답을 확인하지 못했습니다. 다시 로그인해 주세요.",
+          invalid_state: "로그인 확인에 실패했습니다. 다시 로그인해 주세요.",
+          token_exchange: "Google 인증을 완료하지 못했습니다. 다시 로그인해 주세요.",
+          userinfo: "Google 계정 정보를 확인하지 못했습니다. 다시 로그인해 주세요.",
+          unauthorized: "이 Google 계정은 atom에 접근할 수 없습니다.",
+          deactivated: "이 계정은 atom 접근이 중지되었습니다.",
+        };
+        return messages[code] || "Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요.";
+      }
+
+      function clearPrivateData() {
+        searchVersion += 1;
+        cardVersion += 1;
+        if (activeSearch) activeSearch.abort();
+        if (activeCardRequest) activeCardRequest.abort();
+        activeSearch = null;
+        activeCardRequest = null;
+        finishMotion();
+        input.value = "";
+        lastQuery = "";
+        selectedButton = null;
+        selectedResult = null;
+        resultList.replaceChildren();
+        queryNode.hidden = true;
+        queryState.hidden = true;
+        originalPanel.replaceChildren();
+        workbench.hidden = true;
+        cancelButton.hidden = true;
+        showAllButton.hidden = true;
+        retrySearchButton.hidden = true;
+      }
+
+      function enterLoginState(message) {
+        clearPrivateData();
+        authenticated = false;
+        updateSearchAvailability();
+        setAuthMessage(message || "");
+        if (!message) setLiveStatus("로그인이 필요합니다.");
+      }
+
+      async function loadAuthState() {
+        retryAuthButton.hidden = true;
+        setAuthMessage("");
+        setLiveStatus("인증 상태를 확인하고 있습니다.");
+        try {
+          const providers = await getJson("/api/auth/providers");
+          googleAvailable = providers && providers.google === true;
+          const status = await getJson("/api/auth/status");
+          if (!status || status.authenticated !== true) {
+            enterLoginState("");
+            if (!googleAvailable) {
+              setAuthMessage("Google 로그인을 사용할 수 없습니다.");
+              setLiveStatus("");
+            }
+            return;
+          }
+          authenticated = true;
+          updateSearchAvailability();
+          setLiveStatus("");
+        } catch (error) {
+          if (error && error.status === 401) {
+            enterLoginState("");
+            return;
+          }
+          authenticated = false;
+          updateSearchAvailability();
+          setAuthMessage("인증 상태를 확인하지 못했습니다.");
+          retryAuthButton.hidden = false;
+          setLiveStatus("", "error");
+        }
+      }
+
+      function updateQueryState(message, busy) {
+        queryState.hidden = !busy;
+        queryState.dataset.busy = busy ? "true" : "false";
+      }
+
+      function cancelMotion() {
+        if (motionFrame) cancelAnimationFrame(motionFrame);
+        motionFrame = 0;
+        motionEntries.forEach((entry) => {
+          entry.node.style.transform = "";
+          entry.node.style.willChange = "";
+        });
+        motionEntries = [];
+        edgeLayout = [];
+        queryEdge = null;
+        showAllButton.hidden = true;
+        connections.replaceChildren();
+      }
+
+      function finishMotion() {
+        if (motionFrame) cancelAnimationFrame(motionFrame);
+        motionFrame = 0;
+        motionEntries.forEach((entry) => {
+          entry.node.style.transform = "translate3d(0, 0, 0)";
+          entry.node.style.willChange = "";
+        });
+        motionEntries = [];
+        showAllButton.hidden = true;
+        measureAndDrawEdges();
+      }
+
+      function setQuery(query, searching) {
+        queryNode.hidden = false;
+        queryValue.textContent = query;
+        updateQueryState(searching ? "검색 중" : "", searching);
+      }
+
+      function breadcrumbText(value) {
+        if (!Array.isArray(value) || value.length === 0) return "";
+        return value.map((part) => String(part)).join(" › ");
+      }
+
+      function plainSnippet(value) {
+        return String(value || "").replace(/<\/?b>/gi, "");
+      }
+
+      function setButtonText(button, value) {
+        button.textContent = value;
+      }
+
+      function clearSelection() {
+        if (selectedButton) selectedButton.setAttribute("aria-pressed", "false");
+        selectedButton = null;
+        selectedResult = null;
+        originalPanel.replaceChildren();
+        measureAndDrawEdges();
+      }
+
+      function createResultNode(result) {
+        const item = document.createElement("li");
+        item.className = "result-item";
+        const button = document.createElement("button");
+        button.className = "apple-button apple-button--secondary result-node";
+        button.type = "button";
+        button.dataset.cardId = String(result.card_id);
+        button.setAttribute("aria-pressed", "false");
+        button.setAttribute("aria-label", "원문 열기: " + String(result.title || "제목 없음"));
+
+        const title = document.createElement("span");
+        title.className = "result-title";
+        title.textContent = String(result.title || "제목 없음");
+        button.append(title);
+
+        const breadcrumb = breadcrumbText(result.node_path);
+        if (breadcrumb) {
+          const path = document.createElement("span");
+          path.className = "breadcrumb";
+          path.textContent = breadcrumb;
+          button.append(path);
+        }
+
+        const snippet = plainSnippet(result.snippet);
+        if (snippet) {
+          const preview = document.createElement("span");
+          preview.className = "result-snippet";
+          preview.textContent = snippet;
+          button.append(preview);
+        }
+
+        button.addEventListener("click", () => selectResult(result, button));
+        item.append(button);
+        return { item: item, button: button };
+      }
+
+      function renderResults(results) {
+        cancelMotion();
+        clearSelection();
+        const nodes = results.map(createResultNode);
+        resultList.replaceChildren(...nodes.map((node) => node.item));
+        setQuery(lastQuery, false);
+        if (results.length === 0) {
+          setLiveStatus("검색 결과가 없습니다.");
+          return;
+        }
+        setLiveStatus("검색 결과가 펼쳐졌습니다.");
+        startMotion(nodes.map((node) => node.button));
+      }
+
+      function relativeRect(element, parentRect) {
+        const rect = element.getBoundingClientRect();
+        return {
+          left: rect.left - parentRect.left,
+          right: rect.right - parentRect.left,
+          top: rect.top - parentRect.top,
+          bottom: rect.bottom - parentRect.top,
+          centerX: rect.left - parentRect.left + rect.width / 2,
+          centerY: rect.top - parentRect.top + rect.height / 2,
+        };
+      }
+
+      function tokenLengthPx(name) {
+        const token = getComputedStyle(root).getPropertyValue(name).trim();
+        const value = Number.parseFloat(token);
+        const rootFontSize = Number.parseFloat(getComputedStyle(root).fontSize);
+        return token.endsWith("rem") ? value * rootFontSize : value;
+      }
+
+      function measureAndDrawEdges() {
+        if (workbench.hidden || queryNode.hidden || resultList.children.length === 0) {
+          connections.replaceChildren();
+          edgeLayout = [];
+          queryEdge = null;
+          return;
+        }
+
+        const parentRect = network.getBoundingClientRect();
+        queryEdge = relativeRect(queryNode, parentRect);
+        edgeLayout = Array.from(resultList.querySelectorAll(".result-node")).map((node) => ({
+          node: node,
+          rect: relativeRect(node, parentRect),
+          cardId: node.dataset.cardId || "",
+        }));
+
+        const mobile = mobileLayout.matches;
+        const corridorWidth = mobile ? tokenLengthPx("--apple-space-6") : 0;
+        const corridorX = mobile
+          ? Math.min(queryEdge.left + corridorWidth / 2, edgeLayout[0].rect.left - corridorWidth / 2)
+          : 0;
+        const cornerRadius = mobile ? tokenLengthPx("--apple-space-2") : 0;
+        const children = edgeLayout.map((entry) => {
+          const endX = entry.rect.left;
+          const endY = entry.rect.centerY;
+          const startX = mobile ? corridorX : queryEdge.right;
+          const startY = mobile ? queryEdge.bottom : queryEdge.centerY;
+          const distance = mobile ? Math.max(0, endY - startY) : Math.max(0, endX - startX);
+          const bend = Math.max(0, Math.min(72, distance * 0.3));
+          const radius = Math.min(cornerRadius, distance / 2);
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("class", "connection");
+          path.setAttribute("data-card-id", entry.cardId);
+          if (selectedResult && entry.cardId === selectedResult.card_id) {
+            path.classList.add("is-selected");
+          }
+          const d = mobile
+            ? "M " + startX + " " + startY + " L " + corridorX + " " + (endY - radius) + " Q " + corridorX + " " + endY + " " + (corridorX + radius) + " " + endY + " L " + endX + " " + endY
+            : "M " + startX + " " + startY + " C " + (startX + bend) + " " + startY + ", " + (endX - bend) + " " + endY + ", " + endX + " " + endY;
+          path.setAttribute("d", d);
+          return path;
+        });
+        const height = Math.max(network.scrollHeight, parentRect.height);
+        connections.setAttribute("viewBox", "0 0 " + Math.max(1, parentRect.width) + " " + Math.max(1, height));
+        connections.setAttribute("width", String(Math.max(1, parentRect.width)));
+        connections.setAttribute("height", String(Math.max(1, height)));
+        connections.replaceChildren(...children);
+      }
+
+      function startMotion(nodes) {
+        measureAndDrawEdges();
+        if (nodes.length === 0 || reducedMotion.matches) {
+          finishMotion();
+          return;
+        }
+
+        const computed = getComputedStyle(root);
+        const tokenValue = computed.getPropertyValue("--apple-space-6").trim();
+        const tokenNumber = Number.parseFloat(tokenValue);
+        const rootFontSize = Number.parseFloat(getComputedStyle(root).fontSize) || 16;
+        const offset = tokenValue.endsWith("rem") ? tokenNumber * rootFontSize : tokenNumber;
+        const isMobile = mobileLayout.matches;
+        const responseSeconds = 0.4;
+        const omega = (2 * Math.PI) / responseSeconds;
+        const firstFrame = performance.now();
+
+        motionEntries = nodes.map((node, index) => {
+          node.style.willChange = "transform";
+          return {
+            node: node,
+            startAt: firstFrame + index * 42,
+            startX: isMobile ? 0 : -offset,
+            startY: isMobile ? -offset : 0,
+          };
+        });
+
+        function frame(now) {
+          let running = false;
+          motionEntries.forEach((entry) => {
+            const elapsed = Math.max(0, (now - entry.startAt) / 1000);
+            const decay = Math.exp(-omega * elapsed);
+            const x = entry.startX === 0
+              ? 0
+              : (entry.startX + omega * entry.startX * elapsed) * decay;
+            const y = entry.startY === 0
+              ? 0
+              : (entry.startY + omega * entry.startY * elapsed) * decay;
+            const settled = elapsed > responseSeconds * 2.5 || (Math.abs(x) < 0.125 && Math.abs(y) < 0.125);
+            const currentX = settled ? 0 : x;
+            const currentY = settled ? 0 : y;
+            entry.node.style.transform = "translate3d(" + currentX + "px, " + currentY + "px, 0)";
+            if (!settled) running = true;
+          });
+          measureAndDrawEdges();
+          if (running) {
+            motionFrame = requestAnimationFrame(frame);
+          } else {
+            motionFrame = 0;
+            motionEntries.forEach((entry) => {
+              entry.node.style.transform = "";
+              entry.node.style.willChange = "";
+            });
+            motionEntries = [];
+            showAllButton.hidden = true;
+          }
+        }
+
+        showAllButton.hidden = false;
+        motionFrame = requestAnimationFrame(frame);
+      }
+
+      function makeOriginalPanel(result, card) {
+        const details = document.createElement("details");
+        details.className = "apple-details original-details";
+        details.open = true;
+
+        const summary = document.createElement("summary");
+        summary.textContent = String(card.title || result.title || "제목 없음");
+        details.append(summary);
+
+        const content = document.createElement("div");
+        content.className = "original-content";
+
+        const actions = document.createElement("div");
+        actions.className = "detail-actions";
+        const back = document.createElement("button");
+        back.className = "apple-button apple-button--secondary";
+        back.type = "button";
+        setButtonText(back, "결과로 돌아가기");
+        back.addEventListener("click", () => {
+          if (!selectedButton) return;
+          selectedButton.scrollIntoView({
+            behavior: reducedMotion.matches ? "auto" : "smooth",
+            block: "center",
+          });
+          selectedButton.focus({ preventScroll: true });
+        });
+        actions.append(back);
+
+        if (result.node_id) {
+          const link = document.createElement("a");
+          link.className = "apple-button apple-button--secondary";
+          link.href = "https://atom.eiaserinnys.me/#" + encodeURIComponent(result.node_id);
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "atom에서 열기";
+          actions.append(link);
+        }
+
+        const breadcrumb = breadcrumbText(result.node_path);
+        if (breadcrumb) {
+          const path = document.createElement("p");
+          path.className = "apple-muted breadcrumb";
+          path.textContent = breadcrumb;
+          content.append(path);
+        }
+
+        const body = document.createElement("pre");
+        body.className = "original-body";
+        body.textContent = typeof card.content === "string" ? card.content : "";
+        actions.insertBefore(back, actions.firstChild);
+        content.prepend(actions);
+        content.append(body);
+        details.append(content);
+        originalPanel.replaceChildren(details);
+        return summary;
+      }
+
+      function showCardError(message, retry, isError) {
+        const box = document.createElement("div");
+        box.className = "apple-details original-details";
+        const notice = document.createElement("p");
+        notice.className = "apple-muted original-notice";
+        notice.tabIndex = -1;
+        if (isError !== false) notice.dataset.kind = "error";
+        notice.setAttribute("role", "status");
+        notice.setAttribute("aria-live", "polite");
+        notice.textContent = message;
+        const content = document.createElement("div");
+        content.className = "original-content";
+        content.append(notice);
+        if (retry) {
+          const button = document.createElement("button");
+          button.className = "apple-button apple-button--secondary";
+          button.type = "button";
+          button.textContent = "다시 시도";
+          button.addEventListener("click", retry);
+          content.append(button);
+        }
+        box.append(content);
+        originalPanel.replaceChildren(box);
+        if (mobileLayout.matches) {
+          originalPanel.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
+        }
+        notice.focus({ preventScroll: true });
+      }
+
+      async function selectResult(result, button) {
+        if (activeCardRequest) activeCardRequest.abort();
+        cardVersion += 1;
+        const thisVersion = cardVersion;
+        const controller = new AbortController();
+        activeCardRequest = controller;
+        if (selectedButton) selectedButton.setAttribute("aria-pressed", "false");
+        selectedButton = button;
+        selectedResult = result;
+        button.setAttribute("aria-pressed", "true");
+        measureAndDrawEdges();
+        const cardId = String(result.card_id);
+        showCardError("원문을 불러오고 있습니다.", undefined, false);
+
+        try {
+          const card = await getJson("/cards/" + encodeURIComponent(cardId), controller.signal);
+          if (thisVersion !== cardVersion || controller.signal.aborted) return;
+          if (!card || String(card.id) !== cardId) throw new Error("card-mismatch");
+          const summary = makeOriginalPanel(result, card);
+          measureAndDrawEdges();
+          if (mobileLayout.matches) {
+            originalPanel.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
+          }
+          summary.focus({ preventScroll: true });
+        } catch (error) {
+          if (controller.signal.aborted || thisVersion !== cardVersion) return;
+          if (error && error.status === 401) {
+            enterLoginState("");
+            return;
+          }
+          const message = error && error.status === 403
+            ? "원문에 접근할 수 없습니다."
+            : error && error.status === 404
+              ? "카드를 찾을 수 없습니다. 결과에서 다시 선택해 주세요."
+              : "원문을 불러오지 못했습니다.";
+          showCardError(message, () => selectResult(result, button));
+        } finally {
+          if (thisVersion === cardVersion) activeCardRequest = null;
+        }
+      }
+
+      function cancelSearch() {
+        if (!activeSearch) return;
+        searchVersion += 1;
+        activeSearch.abort();
+        activeSearch = null;
+        cancelButton.hidden = true;
+        updateQueryState("", false);
+        setLiveStatus("검색을 취소했습니다.");
+      }
+
+      async function submitSearch(rawQuery) {
+        const query = String(rawQuery || "").trim();
+        if (!query) {
+          setLiveStatus("검색어를 입력해 주세요.");
+          input.focus();
+          return;
+        }
+        if (!authenticated) {
+          enterLoginState("");
+          return;
+        }
+
+        if (activeSearch) activeSearch.abort();
+        if (activeCardRequest) activeCardRequest.abort();
+        searchVersion += 1;
+        cardVersion += 1;
+        const thisVersion = searchVersion;
+        const controller = new AbortController();
+        activeSearch = controller;
+        lastQuery = query;
+        input.value = query;
+        cancelMotion();
+        selectedButton = null;
+        selectedResult = null;
+        originalPanel.replaceChildren();
+        resultList.replaceChildren();
+        connections.replaceChildren();
+        workbench.hidden = false;
+        setQuery(query, true);
+        cancelButton.hidden = false;
+        showAllButton.hidden = true;
+        retrySearchButton.hidden = true;
+        setLiveStatus("검색 중");
+
+        const params = new URLSearchParams();
+        params.set("q", query);
+        try {
+          const results = await getJson("/search?" + params.toString(), controller.signal);
+          if (thisVersion !== searchVersion || controller.signal.aborted) return;
+          if (!Array.isArray(results)) throw new Error("invalid-search-response");
+          activeSearch = null;
+          cancelButton.hidden = true;
+          renderResults(results);
+        } catch (error) {
+          if (controller.signal.aborted || thisVersion !== searchVersion) return;
+          activeSearch = null;
+          cancelButton.hidden = true;
+          if (error && error.status === 401) {
+            enterLoginState("");
+            return;
+          }
+          if (error && error.status === 403) {
+            resultList.replaceChildren();
+            updateQueryState("", false);
+            setLiveStatus("검색에 접근할 수 없습니다.", "error");
+            return;
+          }
+          updateQueryState("", false);
+          setLiveStatus("검색을 완료하지 못했습니다.", "error");
+          retrySearchButton.hidden = false;
+        }
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (composing) return;
+        submitSearch(input.value);
+      });
+
+      input.addEventListener("compositionstart", () => { composing = true; });
+      input.addEventListener("compositionend", () => { composing = false; });
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && (event.isComposing || composing || event.keyCode === 229)) {
+          event.preventDefault();
+        }
+      });
+
+      cancelButton.addEventListener("click", cancelSearch);
+      showAllButton.addEventListener("click", finishMotion);
+      retrySearchButton.addEventListener("click", () => submitSearch(lastQuery));
+      retryAuthButton.addEventListener("click", loadAuthState);
+
+      window.addEventListener("resize", () => {
+        if (motionFrame) return;
+        measureAndDrawEdges();
+      }, { passive: true });
+
+      if (typeof ResizeObserver === "function") {
+        const resizeObserver = new ResizeObserver(() => {
+          if (!motionFrame) measureAndDrawEdges();
+        });
+        resizeObserver.observe(network);
+      }
+
+      const pageUrl = new URL(window.location.href);
+      const initialAuthError = pageUrl.searchParams.get("auth_error");
+      if (initialAuthError) {
+        history.replaceState(null, "", pageUrl.pathname);
+        setAuthMessage(authErrorMessage(initialAuthError));
+      }
+
+      loadAuthState().then(() => {
+        if (initialAuthError) {
+          setAuthMessage(authErrorMessage(initialAuthError));
+          setLiveStatus("");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
