@@ -90,6 +90,7 @@
       --apple-label: #f5f5f7;
       --apple-label-secondary: #a1a1a6;
       --apple-label-tertiary: #8e8e93;
+      --apple-label-inverse: #1d1d1f;
       --apple-separator: rgb(255 255 255 / 16%);
       --apple-separator-strong: rgb(255 255 255 / 30%);
       --apple-accent: #2997ff;
@@ -109,6 +110,7 @@
         --apple-label: #f5f5f7;
         --apple-label-secondary: #a1a1a6;
         --apple-label-tertiary: #8e8e93;
+        --apple-label-inverse: #1d1d1f;
         --apple-separator: rgb(255 255 255 / 16%);
         --apple-separator-strong: rgb(255 255 255 / 30%);
         --apple-accent: #2997ff;
@@ -260,6 +262,18 @@
       justify-content: space-between;
       gap: var(--apple-space-4);
       margin-block: var(--apple-space-3) var(--apple-space-8);
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .apple-muted {
@@ -466,6 +480,8 @@
       padding-bottom: var(--apple-space-6);
     }
 
+    .original-notice { margin-block: var(--apple-space-4); }
+
     .detail-actions {
       flex-wrap: wrap;
       margin-bottom: var(--apple-space-6);
@@ -653,6 +669,7 @@
       function setLiveStatus(message, kind) {
         liveStatus.textContent = message;
         liveStatus.dataset.kind = kind || "normal";
+        liveStatus.classList.toggle("visually-hidden", message === "검색 결과가 펼쳐졌습니다.");
       }
 
       function setAuthMessage(message) {
@@ -760,7 +777,7 @@
           updateSearchAvailability();
           setAuthMessage("인증 상태를 확인하지 못했습니다.");
           retryAuthButton.hidden = false;
-          setLiveStatus("다시 시도해 주세요.", "error");
+          setLiveStatus("", "error");
         }
       }
 
@@ -1008,7 +1025,6 @@
         details.open = true;
 
         const summary = document.createElement("summary");
-        summary.tabIndex = -1;
         summary.textContent = String(card.title || result.title || "제목 없음");
         details.append(summary);
 
@@ -1063,30 +1079,30 @@
       function showCardError(message, retry, isError) {
         const box = document.createElement("div");
         box.className = "apple-details original-details";
-        const title = document.createElement("h2");
-        title.tabIndex = -1;
-        title.textContent = "원문";
         const notice = document.createElement("p");
-        notice.className = "apple-muted";
+        notice.className = "apple-muted original-notice";
+        notice.tabIndex = -1;
         if (isError !== false) notice.dataset.kind = "error";
         notice.setAttribute("role", "status");
         notice.setAttribute("aria-live", "polite");
         notice.textContent = message;
-        box.append(title, notice);
+        const content = document.createElement("div");
+        content.className = "original-content";
+        content.append(notice);
         if (retry) {
           const button = document.createElement("button");
           button.className = "apple-button apple-button--secondary";
           button.type = "button";
           button.textContent = "다시 시도";
           button.addEventListener("click", retry);
-          box.append(button);
+          content.append(button);
         }
+        box.append(content);
         originalPanel.replaceChildren(box);
         if (mobileLayout.matches) {
           originalPanel.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
         }
-        const heading = originalPanel.querySelector("h2");
-        if (heading) heading.focus({ preventScroll: true });
+        notice.focus({ preventScroll: true });
       }
 
       async function selectResult(result, button) {
