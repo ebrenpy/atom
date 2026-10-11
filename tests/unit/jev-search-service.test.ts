@@ -98,6 +98,11 @@ describe("Jev search traversal and trace", () => {
     const structureStep = response.trace.steps.find((step) => step.stage === "structure_noul");
     const selectionStep = response.trace.steps.find((step) => step.stage === "selection");
     const rootKnowledge = response.trace.candidates.find((candidate) => candidate.card_id === "card-root");
+    const structureCall = response.trace.calls.find((call) => call.stage === "structure_noul");
+    const structureRequest = structureCall?.request as {
+      state: { stage: string; user_prompt: string; candidates: Array<{ card_id: string }> };
+      questions: Record<string, { type: string; instructions: string; criteria: { true: string; false: string } }>;
+    };
 
     expect(tree.calls.map((call) => call.nodeId)).toEqual([null, ids.a, ids.b, ids.a1, ids.b1]);
     expect(tree.calls.every((call) => call.depth === 2 && call.excerptChars === 200)).toBe(true);
@@ -113,6 +118,21 @@ describe("Jev search traversal and trace", () => {
     expect(response.results[0]?.selected_from_step_id).toBe(selectionStep?.id);
     expect(selectionStep?.selection_threshold).toBeCloseTo(0.7);
     expect(structureStep?.decisions.map((decision) => decision.action)).toEqual(["queued", "queued"]);
+    expect(structureRequest.state).toMatchObject({ stage: "structure_noul", user_prompt: "게임 규칙" });
+    expect(structureRequest.state.candidates.map((candidate) => candidate.card_id)).toEqual(["card-a", "card-b"]);
+    expect(structureRequest.questions.structure_0).toMatchObject({
+      type: "noul",
+      instructions: expect.stringContaining("요청: 게임 규칙"),
+      criteria: { true: expect.stringContaining("구조의 성격"), false: expect.any(String) },
+    });
+    expect(structureRequest.questions.structure_0.instructions).toContain("짧은 설명: A 모음");
+    expect(structureRequest.questions.structure_0.instructions).toContain("직계 자식");
+    for (const step of response.trace.steps.filter((item) => item.stage === "structure_noul" || item.stage === "content_noul")) {
+      const call = response.trace.calls.find((item) => item.call_id === step.call_id);
+      const answers = (call?.response as { answers: Record<string, { noul: number }> } | null)?.answers;
+      expect(step.decisions.map((decision) => answers?.[decision.question_key ?? ""]?.noul)).toEqual(step.decisions.map((decision) => decision.score));
+    }
+    expect(JSON.stringify(structureRequest)).not.toMatch(/Bearer\s|authorization|TYPESAFE_/i);
     expect(rootKnowledge).toBeDefined();
     expect(outlineSteps[0]?.decisions.find((decision) => decision.ref === rootKnowledge?.ref)).toMatchObject({ action: "no_body", score: null });
     expect(response.trace.steps.map((step) => step.seq)).toEqual(response.trace.steps.map((_step, index) => index + 1));
@@ -144,9 +164,10 @@ describe("Jev search traversal and trace", () => {
       judge: async (payload) => answerPayload(payload, () => 0.7),
     });
     const aliasedOccurrence = response.trace.candidates.find((candidate) => candidate.node_id === aliasAgainId);
+    const discoveredOccurrence = response.trace.candidates.find((candidate) => candidate.node_id === aliasId);
     const child = response.trace.candidates.find((candidate) => candidate.node_id === leafId);
     const summaryStep = response.trace.steps.find((step) => step.stage === "atom_outline" && step.purpose === "symlink_summary");
-    const expansionStep = response.trace.steps.find((step) => step.stage === "atom_outline" && step.parent_ref !== null);
+    const expansionStep = response.trace.steps.find((step) => step.stage === "atom_outline" && step.purpose === "candidate_discovery" && step.parent_ref !== null);
 
     expect(calls).toEqual([
       { nodeId: null, depth: 2, excerptChars: 200 },
@@ -154,6 +175,8 @@ describe("Jev search traversal and trace", () => {
       { nodeId: aliasId, depth: 2, excerptChars: 200 },
     ]);
     expect(aliasedOccurrence).toBeDefined();
+    expect(discoveredOccurrence?.canonical_node_id).toBeNull();
+    expect(aliasedOccurrence?.canonical_node_id).toBeNull();
     expect(response.trace.steps.flatMap((step) => step.decisions).find((decision) => decision.ref === aliasedOccurrence?.ref)).toMatchObject({ action: "alias", reused_from_ref: expect.any(String) });
     expect(summaryStep?.canonical_node_id).toBe(canonicalId);
     expect(expansionStep?.canonical_node_id).toBe(canonicalId);
@@ -204,8 +227,14 @@ describe("Jev search traversal and trace", () => {
     expect(response.trace.steps.at(-1)).toMatchObject({ stage: "run_terminal", terminal_status: "error" });
     expect(response.trace.calls.at(-1)?.error?.message).not.toContain("raw");
     expect(response.trace.steps.find((step) => step.stage === "structure_noul")?.decisions).toEqual([]);
-    expect(response.trace.calls.at(-1)?.request).toEqual({ model: "jev-latest", question_count: 2, state_chars: expect.any(Number) });
-    expect(JSON.stringify(response.trace.calls)).not.toContain("게임 규칙");
+    const request = response.trace.calls.at(-1)?.request as {
+      questions: Record<string, { instructions: string; criteria: { true: string; false: string } }>;
+    };
+    expect(request.questions.structure_0.instructions).toContain("요청: 게임 규칙");
+    expect(request.questions.structure_0.instructions).toContain("짧은 설명: A 모음");
+    expect(request.questions.structure_0.instructions).toContain("직계 자식");
+    expect(request.questions.structure_0.criteria.true).toContain("구조의 성격");
+    expect(JSON.stringify(request)).not.toMatch(/Bearer\s|authorization|TYPESAFE_/i);
   });
 
   it("discards a late Jev response after cancellation", async () => {
@@ -231,8 +260,39 @@ describe("Jev search traversal and trace", () => {
 
     expect(response.status).toBe("cancelled");
     expect(response.results).toEqual([]);
-    expect(response.trace.steps.at(-1)).toMatchObject({ stage: "run_terminal", terminal_status: "cancelled" });
-    expect(response.trace.steps.find((step) => step.stage === "structure_noul")?.decisions).toEqual([]);
+    const terminal = response.trace.steps.at(-1);
+    const step = response.trace.steps.find((item) => item.stage === "structure_noul");
+    const call = response.trace.calls.find((item) => item.call_id === step?.call_id);
+    expect(terminal).toMatchObject({ stage: "run_terminal", terminal_status: "cancelled", started_at: response.completed_at, completed_at: response.completed_at });
+    expect(step?.completed_at).not.toBeNull();
+    expect(call).toMatchObject({ completed_at: step?.completed_at, disposition: "skipped" });
+    expect(call?.response?.answers).toEqual({ structure_0: { type: "noul", noul: 1 }, structure_1: { type: "noul", noul: 1 } });
+    expect(step?.decisions).toEqual([]);
+
+    const abortController = new AbortController();
+    let abortStarted!: () => void;
+    const abortEntered = new Promise<void>((resolve) => { abortStarted = resolve; });
+    const abortedPending = searchWithJev({ query: "게임 규칙" }, {
+      getNode: async () => null,
+      getTreeOutline: tree.getTreeOutline,
+      judge: async (_payload, signal) => {
+        abortStarted();
+        return new Promise<JevMeaningResponse>((_resolve, reject) => {
+          signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+        });
+      },
+    }, abortController.signal);
+
+    await abortEntered;
+    abortController.abort();
+    const abortedResponse = await abortedPending;
+    const abortedTerminal = abortedResponse.trace.steps.at(-1);
+    const abortedStep = abortedResponse.trace.steps.find((item) => item.stage === "structure_noul");
+    const abortedCall = abortedResponse.trace.calls.find((item) => item.call_id === abortedStep?.call_id);
+    expect(abortedResponse.status).toBe("cancelled");
+    expect(abortedStep?.completed_at).toBeNull();
+    expect(abortedCall).toMatchObject({ completed_at: null, disposition: "skipped" });
+    expect(abortedTerminal).toMatchObject({ stage: "run_terminal", terminal_status: "cancelled", started_at: abortedResponse.completed_at, completed_at: abortedResponse.completed_at });
   });
 
   it("returns limited when the candidate ceiling prevents further discovery", async () => {

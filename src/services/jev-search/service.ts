@@ -143,15 +143,15 @@ export async function searchWithJev(
     let outline: TreeOutline | null;
     try {
       if (stopped()) {
-        step.completed_at = now();
         finishCall(call, { completedAt: null, disposition: "skipped" });
         return;
       }
       outline = await deps.getTreeOutline(nodeId, depth, excerptChars);
       if (stopped()) {
-        step.completed_at = now();
+        const completedAt = now();
+        step.completed_at = completedAt;
         finishCall(call, {
-          completedAt: null,
+          completedAt,
           outlineResponse: outline ? { canonical_node_id: outline.canonical_node_id, node_count: outline.nodes.length } : null,
           disposition: "skipped",
         });
@@ -160,7 +160,6 @@ export async function searchWithJev(
       if (!outline) throw new Error("outline missing");
     } catch (error) {
       if (stopped()) {
-        step.completed_at = now();
         finishCall(call, { completedAt: null, disposition: "skipped" });
         return;
       }
@@ -178,11 +177,6 @@ export async function searchWithJev(
     if (purpose === "symlink_summary") {
       if (parent) {
         parent.childSummary = childSummaryFromSymlinkOutline(outline.nodes);
-        for (const occurrence of occurrences) {
-          if (occurrence.card_id === parent.cardId && occurrence.is_symlink) {
-            occurrence.canonical_node_id = outline.canonical_node_id;
-          }
-        }
       }
       const completedAt = now();
       step.completed_at = completedAt;
@@ -275,7 +269,6 @@ export async function searchWithJev(
       response = await deps.judge(payload, controller.signal);
     } catch (error) {
       if (stopped()) {
-        step.completed_at = now();
         finishCall(call, { completedAt: null, disposition: "skipped" });
         return null;
       }
@@ -285,8 +278,9 @@ export async function searchWithJev(
       throw new JevRunError(safeError.code, safeError.message);
     }
     if (stopped()) {
-      step.completed_at = now();
-      finishCall(call, { completedAt: null, response, disposition: "skipped" });
+      const completedAt = now();
+      step.completed_at = completedAt;
+      finishCall(call, { completedAt, response, disposition: "skipped" });
       return null;
     }
 

@@ -658,6 +658,7 @@
       let activeCardRequest = null;
       let searchVersion = 0;
       let cardVersion = 0;
+      let lastJevSearch = null;
       let lastQuery = "";
       let selectedButton = null;
       let selectedResult = null;
@@ -693,6 +694,65 @@
         return error;
       }
 
+      function isRecord(value) {
+        return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+      }
+
+      function safeJevErrorCode(value) {
+        return typeof value === "string" && /^[A-Z0-9_]{1,64}$/.test(value) ? value : "JEV_SEARCH_FAILED";
+      }
+
+      function projectJevSearchEnvelope(value) {
+        if (!isRecord(value) || value.schema_version !== 1 || value.engine !== "jev") return null;
+        if (typeof value.run_id !== "string" || typeof value.query !== "string") return null;
+        if (value.root_node_id !== null && typeof value.root_node_id !== "string") return null;
+        if (!["complete", "limited", "cancelled", "error"].includes(value.status)) return null;
+        if (typeof value.complete !== "boolean" || typeof value.started_at !== "string" || typeof value.completed_at !== "string") return null;
+        if (!isRecord(value.policy) || !Array.isArray(value.results) || !isRecord(value.trace)) return null;
+        if (!Array.isArray(value.trace.candidates) || !Array.isArray(value.trace.steps) || !Array.isArray(value.trace.calls)) return null;
+        const hasError = isRecord(value.error) && typeof value.error.code === "string" && typeof value.error.message === "string";
+        if (value.status === "complete" ? value.complete !== true || value.error !== null : value.complete !== false || !hasError) return null;
+
+        const error = value.error === null ? null : {
+          code: safeJevErrorCode(value.error.code),
+          message: jevErrorMessage({ code: safeJevErrorCode(value.error.code) }),
+        };
+        return {
+          schema_version: 1,
+          engine: "jev",
+          run_id: value.run_id,
+          query: value.query,
+          root_node_id: value.root_node_id,
+          status: value.status,
+          complete: value.complete,
+          started_at: value.started_at,
+          completed_at: value.completed_at,
+          policy: value.policy,
+          results: value.results,
+          trace: {
+            candidates: value.trace.candidates,
+            steps: value.trace.steps,
+            calls: value.trace.calls,
+          },
+          error: error,
+        };
+      }
+
+      function safeJevFailureEnvelope(body) {
+        const projected = projectJevSearchEnvelope(body);
+        if (projected && projected.status === "error") return projected;
+        const detail = isRecord(body) && isRecord(body.error) ? body.error : null;
+        const code = safeJevErrorCode(detail && detail.code);
+        return {
+          schema_version: 1,
+          engine: "jev",
+          status: "error",
+          complete: false,
+          error: { code: code, message: jevErrorMessage({ code: code }) },
+          trace: null,
+        };
+      }
+
       async function getJson(path, signal, readJevErrorEnvelope) {
         const response = await fetch(API_BASE_URL + path, {
           method: "GET",
@@ -701,16 +761,16 @@
           headers: { Accept: "application/json" },
           signal: signal,
         });
+        if (response.status === 401) lastJevSearch = null;
         if (!response.ok) {
           const error = errorStatus(response.status);
           if (readJevErrorEnvelope) {
+            let body = null;
             try {
-              const body = await response.json();
-              const detail = body && typeof body === "object" && body.error && typeof body.error === "object"
-                ? body.error
-                : null;
-              if (detail && typeof detail.code === "string") error.code = detail.code;
+              body = await response.json();
             } catch { /* keep the HTTP status when the error body is not JSON */ }
+            error.jevEnvelope = safeJevFailureEnvelope(body);
+            error.code = error.jevEnvelope.error.code;
           }
           throw error;
         }
@@ -746,6 +806,7 @@
       function clearPrivateData() {
         searchVersion += 1;
         cardVersion += 1;
+        lastJevSearch = null;
         if (activeSearch) activeSearch.abort();
         if (activeCardRequest) activeCardRequest.abort();
         activeSearch = null;
@@ -1171,6 +1232,7 @@
       }
 
       function cancelSearch() {
+        lastJevSearch = null;
         if (!activeSearch) return;
         searchVersion += 1;
         activeSearch.abort();
@@ -1197,6 +1259,7 @@
         searchVersion += 1;
         cardVersion += 1;
         const thisVersion = searchVersion;
+        lastJevSearch = null;
         const controller = new AbortController();
         activeSearch = controller;
         lastQuery = query;
@@ -1218,16 +1281,26 @@
         params.set("q", query);
         params.set("engine", "jev");
         try {
-          const response = await getJson("/search?" + params.toString(), controller.signal, true);
+          const rawResponse = await getJson("/search?" + params.toString(), controller.signal, true);
           if (thisVersion !== searchVersion || controller.signal.aborted) return;
-          if (!response || response.engine !== "jev" || !Array.isArray(response.results) || !Array.isArray(response.trace && response.trace.steps)) {
-            throw new Error("invalid-search-response");
-          }
-          if (response.status === "error") {
-            const error = new Error("jev-search-failed");
-            error.code = response.error && response.error.code;
+          const response = projectJevSearchEnvelope(rawResponse);
+          if (!response) {
+            const error = new Error("invalid-search-response");
+            error.jevEnvelope = safeJevFailureEnvelope(null);
             throw error;
           }
+          if (response.status === "error" || response.status === "cancelled") {
+            const error = new Error("jev-search-failed");
+            error.code = response.error && response.error.code;
+            error.jevEnvelope = response;
+            throw error;
+          }
+          if (response.status !== "complete" && response.status !== "limited") {
+            const error = new Error("invalid-search-response");
+            error.jevEnvelope = safeJevFailureEnvelope(null);
+            throw error;
+          }
+          lastJevSearch = { generation: thisVersion, envelope: response };
           activeSearch = null;
           cancelButton.hidden = true;
           renderResults(response.results);
@@ -1241,6 +1314,14 @@
           if (error && error.status === 401) {
             enterLoginState("");
             return;
+          }
+          if (error && error.jevEnvelope && error.jevEnvelope.status === "cancelled") {
+            lastJevSearch = null;
+          } else {
+            lastJevSearch = {
+              generation: thisVersion,
+              envelope: error && error.jevEnvelope ? error.jevEnvelope : safeJevFailureEnvelope(null),
+            };
           }
           if (error && error.status === 403) {
             resultList.replaceChildren();

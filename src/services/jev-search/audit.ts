@@ -23,9 +23,16 @@ export function outlineAuditRequest(nodeId: string | null, depth: number, excerp
 
 export function meaningAuditRequest(payload: JevMeaningPayload): Record<string, unknown> {
   return {
-    model: payload.model,
-    question_count: Object.keys(payload.questions).length,
-    state_chars: payload.state.length,
+    model: sanitizeValue(payload.model),
+    state: sanitizeValue(JSON.parse(payload.state)),
+    questions: Object.fromEntries(Object.entries(payload.questions).map(([key, question]) => [
+      redactSensitiveText(key),
+      {
+        type: sanitizeValue(question.type),
+        instructions: sanitizeValue(question.instructions),
+        criteria: sanitizeValue(question.criteria),
+      },
+    ])),
   };
 }
 
