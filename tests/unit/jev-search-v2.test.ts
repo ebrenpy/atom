@@ -12,7 +12,7 @@ function node(id: string, cardType: "structure" | "knowledge", parent: string | 
     card: { id, card_type: cardType, title: id === parentId ? "모음" : "게임 규칙", content: "# 원문 내용", references: [], tags: [], card_timestamp: null, content_timestamp: null, source_type: null, source_ref: null, source_snapshot: null, source_checksum: null, source_checked_at: null, staleness: "fresh", version: 1, updated_at: "", created_by: null, updated_by: null } };
 }
 function outlineNode(n: TreeNodeWithCard): TreeOutlineNode {
-  return { id: n.id, card_id: n.card_id, parent_node_id: n.parent_node_id, position: 0, is_symlink: false, title: n.card.title,
+  return { id: n.id, card_id: n.card_id, parent_node_id: n.parent_node_id, position: 0, is_symlink: n.is_symlink, title: n.card.title,
     card_type: n.card.card_type, excerpt: "원문 내용", child_count: 0, descendant_count: 0, children: [] };
 }
 function seed(n: TreeNodeWithCard): SearchResult {
@@ -46,6 +46,44 @@ function fixture(options: { seeds?: TreeNodeWithCard[]; sufficient?: number; bud
 }
 
 describe("Jev v2 hop contracts", () => {
+  it("13 opens unscoped virtual-root structures without a judgment and still scores root knowledge", async () => {
+    const f = fixture({ seeds: [], structureScore: 0.43 });
+    const second = node("10000000-0000-4000-8000-000000000004", "structure", null);
+    second.is_symlink = true;
+    const rootKnowledge = node("10000000-0000-4000-8000-000000000005", "knowledge", null);
+    const r = await searchWithJev({ query: "게임" }, {
+      ...f.deps,
+      getTreeOutline: async (id, depth) => {
+        if (id === null) return { node_id: null, canonical_node_id: null, depth, nodes: [f.parent, second, rootKnowledge].map(outlineNode) };
+        return f.deps.getTreeOutline(id, depth);
+      },
+    });
+    const rootRead = r.trace.steps.find(s => s.purpose === "candidate_discovery" && s.parent_ref === null);
+    expect(rootRead?.decisions.filter(d => String(d.action) === "opened_root")).toHaveLength(2);
+    expect(rootRead?.decisions.filter(d => String(d.action) === "opened_root").every(d => d.score === null && d.question_key === null)).toBe(true);
+    expect(f.judgments.filter(j => j.stage === "structure_noul")).toEqual([]);
+    expect(f.judgments.filter(j => j.stage === "content_noul").map(j => j.cards)).toEqual([[rootKnowledge.id], [hitId, siblingId]]);
+    expect(f.reads).toEqual([{ id: parentId, depth: 2 }, { id: second.id, depth: 2 }]);
+  });
+  it("13 keeps scoped child gates and only reopens a pruned seed when it is a virtual-root child", async () => {
+    const f = fixture({ seeds: [], structureScore: 0.43 });
+    const child = node("10000000-0000-4000-8000-000000000004", "structure", parentId);
+    const scoped = await searchWithJev({ query: "게임", root_node_id: parentId }, {
+      ...f.deps,
+      getTreeOutline: async (id, depth) => ({ node_id: id, canonical_node_id: id, depth, nodes: [outlineNode(child)] }),
+    });
+    expect(f.judgments.filter(j => j.stage === "structure_noul").map(j => j.cards)).toEqual([[child.id]]);
+    expect(scoped.trace.steps.flatMap(s => s.decisions).some(d => String(d.action) === "opened_root")).toBe(false);
+    const seedFixture = fixture({ seeds: [f.parent], structureScore: 0.43 });
+    const unscoped = await searchWithJev({ query: "게임" }, seedFixture.deps);
+    expect(unscoped.trace.steps.flatMap(s => s.decisions)).toContainEqual(expect.objectContaining({ action: "opened_root", score: null, question_key: null }));
+    expect(seedFixture.judgments.filter(j => j.stage === "structure_noul").map(j => j.cards)).toEqual([[parentId]]);
+    expect(seedFixture.reads.filter(r => r.id === parentId && r.depth === 2)).toHaveLength(1);
+    const openedFixture = fixture({ seeds: [f.parent] });
+    const alreadyOpened = await searchWithJev({ query: "게임" }, openedFixture.deps);
+    expect(alreadyOpened.trace.steps.flatMap(s => s.decisions).some(d => d.action === "opened_root")).toBe(false);
+    expect(openedFixture.reads.filter(r => r.id === parentId && r.depth === 2)).toHaveLength(1);
+  });
   it("1 stops at sufficient seeds in hop zero without an outline read", async () => {
     const f = fixture({ sufficient: 0.7 });
     const r = await searchWithJev({ query: "게임, 규칙 게임 x" }, f.deps);
@@ -71,16 +109,16 @@ describe("Jev v2 hop contracts", () => {
   it("3 finishes each hop's judgments before reading the next hop", async () => {
     const f = fixture({ seeds: [] });
     const r = await searchWithJev({ query: "게임 규칙" }, f.deps);
-    expect(f.judgments.map(j => j.stage)).toEqual(["structure_noul", "content_noul", "sufficiency_noul"]);
+    expect(f.judgments.map(j => j.stage)).toEqual(["content_noul", "sufficiency_noul"]);
     expect(r.trace.steps.filter(s => ["structure_noul", "content_noul"].includes(s.stage)).map(s => ({ stage: s.stage, hop: (s as unknown as { hop: number }).hop }))).toEqual([
-      { stage: "structure_noul", hop: 1 }, { stage: "content_noul", hop: 2 }]);
+      { stage: "content_noul", hop: 2 }]);
   });
   it("4 widens only once then exhausts when there is no entry", async () => {
     const f = fixture({ seeds: [], structureScore: 0.49 });
     const r = await searchWithJev({ query: "없음" }, f.deps);
     expect(r).toMatchObject({ status: "complete", stop_reason: "exhausted" });
     expect(r.trace.steps.filter(s => String(s.stage) === "widen")).toHaveLength(1);
-    expect(f.reads.map(r => r.id)).toEqual([null]);
+    expect(f.reads.map(r => r.id)).toEqual([null, parentId]);
   });
   it("5 returns scored selections when the Jev call budget is reached", async () => {
     const f = fixture({ budget: 1 });
