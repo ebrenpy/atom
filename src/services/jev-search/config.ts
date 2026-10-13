@@ -20,6 +20,7 @@ export interface JevSearchPolicy {
   sufficiencyThreshold: number;
   maxJevCalls: number;
   maxParallelJevCalls: number;
+  deferCandidates: number;
 }
 
 export const JEV_SEARCH_POLICY: JevSearchPolicy = {
@@ -38,8 +39,9 @@ export const JEV_SEARCH_POLICY: JevSearchPolicy = {
   seedLimit: 24,
   seedMaxTerms: 12,
   sufficiencyThreshold: 0.7,
-  maxJevCalls: 24,
+  maxJevCalls: 32,
   maxParallelJevCalls: 3,
+  deferCandidates: 96,
 };
 
 export interface JevServerConfig {
@@ -121,5 +123,6 @@ export function policyView(policy: JevSearchPolicy = JEV_SEARCH_POLICY): JevSear
     sufficiency_threshold: policy.sufficiencyThreshold,
     max_jev_calls: policy.maxJevCalls,
     max_parallel_jev_calls: policy.maxParallelJevCalls,
+    defer_candidates: policy.deferCandidates,
   };
 }

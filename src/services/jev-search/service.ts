@@ -109,6 +109,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
       if (!scores) return;
       job.batch.forEach((candidate, i) => {
         if (job.stage === "structure_noul") {
+          candidate.structureScore = scores[i];
           if (scores[i] >= policy.structureThreshold && !catalog.opened.has(candidate.cardId)) {
             catalog.opened.add(candidate.cardId);
             frontier.push(candidate);
@@ -126,7 +127,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
   const sufficient = async (): Promise<boolean> => {
     if (run.limitCode || stopped()) return false;
     const selected = selectFeedCards(scored.map(item => ({ ...item, order: item.candidate.discoveryOrder })),
-      { scoreFloor: policy.scoreFloor, relativeScoreDelta: policy.relativeScoreDelta, maxResults: input.limit });
+      { scoreFloor: policy.scoreFloor, structureThreshold: policy.structureThreshold, relativeScoreDelta: policy.relativeScoreDelta, maxResults: input.limit });
     if (!selected.length || selected[0].score < policy.structureThreshold) return false;
     const refs = selected.map(item => item.candidate.ref).join(",");
     if (refs === lastSufficientRefs) return false;
@@ -165,7 +166,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
       const parents = commitParents();
       commitOutlines();
       if (stopped() || run.limitCode) break;
-      if (frontier.length === 0 && parents.length === 0) {
+      if (frontier.length === 0 && parents.length === 0 && !catalog.resumeDeferred()) {
         if (widened) { stopReason = "exhausted"; break; }
         widened = true;
         const step = run.start("widen");

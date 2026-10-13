@@ -10,6 +10,14 @@ export interface SearchCandidate extends JevTraversalCandidate {
   ref: string;
   occurrence: CandidateOccurrence;
   discoveryOrder: number;
+  structureScore?: number;
+  openedByHit?: boolean;
+}
+
+interface DeferredGroup {
+  parent: SearchCandidate | null;
+  kind: "structure" | "content";
+  candidates: SearchCandidate[];
 }
 
 interface SummaryRead {
@@ -22,6 +30,7 @@ interface SummaryRead {
 export class JevSearchCatalog {
   readonly firstByCard = new Map<string, SearchCandidate>();
   readonly opened = new Set<string>();
+  readonly deferred: DeferredGroup[] = [];
   structures: SearchCandidate[] = [];
   content: SearchCandidate[] = [];
   rootPath: string[] = [];
@@ -134,6 +143,7 @@ export class JevSearchCatalog {
         // A previously pruned gate can be reopened using the original identity.
         const parent = this.firstByCard.get(candidate.cardId) ?? this.register(candidate, step, "hit_parent", { hit_ref: hit.ref });
         if (parent) {
+          parent.openedByHit = true;
           this.opened.add(parent.cardId);
           parents.push(parent);
           if (!step.candidate_refs.includes(parent.ref)) step.candidate_refs.push(parent.ref);
@@ -163,11 +173,18 @@ export class JevSearchCatalog {
       if (value.status === "rejected" || !value.value) { this.readFailure(step, call, "ATOM_OUTLINE_FAILED", "Atom tree outline read failed."); return; }
       const outline = value.value;
       step.canonical_node_id = outline.canonical_node_id;
+      const structureStart = this.structures.length, contentStart = this.content.length;
       if (!this.run.stopped()) for (const node of outline.nodes) {
         if (this.run.limitCode) break;
         const candidate = candidateFromOutline(node, parent?.path ?? this.rootPath, parent?.pathNodeIds ?? this.rootPathNodeIds,
           parent?.ref ?? null, parent ? parent.traversalDepth + 1 : 0);
         this.register(candidate, step, "outline");
+      }
+      for (const [kind, pool, start] of [["structure", this.structures, structureStart], ["content", this.content, contentStart]] as const) {
+        if (pool.length - start > this.policy.deferCandidates) {
+          this.deferred.push({ parent, kind, candidates: pool.splice(start) });
+          (step.deferred_kinds ??= []).push(kind);
+        }
       }
       this.run.finish(step, call, { completedAt: new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "completed",
         outlineResponse: { canonical_node_id: outline.canonical_node_id, node_count: outline.nodes.length, candidate_refs: step.candidate_refs } });
@@ -177,6 +194,19 @@ export class JevSearchCatalog {
   async summarize(candidates: SearchCandidate[]): Promise<void> {
     const reads = candidates.map(candidate => this.prepareSummary(candidate.nodeId, candidate.ref));
     await Promise.all(reads.map(async (read, index) => this.completeSummary(read, await read.result, candidates[index])));
+  }
+
+  resumeDeferred(): boolean {
+    this.deferred.sort((left, right) => Number(right.parent?.openedByHit ?? false) - Number(left.parent?.openedByHit ?? false)
+      || (right.parent?.structureScore ?? 0) - (left.parent?.structureScore ?? 0)
+      || left.candidates[0].discoveryOrder - right.candidates[0].discoveryOrder);
+    const group = this.deferred.shift();
+    if (!group) return false;
+    const step = this.run.start("deferred_scan", group.candidates.map(c => c.ref));
+    step.parent_ref = group.parent?.ref ?? null;
+    (group.kind === "structure" ? this.structures : this.content).push(...group.candidates);
+    this.run.finish(step);
+    return true;
   }
 
   private prepareSummary(nodeId: string, ref?: string): SummaryRead {

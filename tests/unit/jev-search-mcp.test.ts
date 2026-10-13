@@ -28,7 +28,7 @@ const jevResponse = {
     prompt_version: "v3", model: "jev-latest", summary_chars: 200, structure_threshold: 0.5,
     score_floor: 0.3, relative_score_delta: 0.1, max_results: 6, batch_candidates: 48,
     payload_max_chars: 60_000, run_timeout_ms: 45_000, max_candidates: 20_000, max_concurrent_runs: 2,
-    seed_limit: 24, seed_max_terms: 12, sufficiency_threshold: 0.7, max_jev_calls: 24, max_parallel_jev_calls: 3,
+    seed_limit: 24, seed_max_terms: 12, sufficiency_threshold: 0.7, max_jev_calls: 32, max_parallel_jev_calls: 3, defer_candidates: 96,
   },
   results: [],
   trace: { candidates: [], steps: [], calls: [] },

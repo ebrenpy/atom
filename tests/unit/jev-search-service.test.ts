@@ -112,16 +112,16 @@ describe("Jev search traversal and trace", () => {
       { stage: "structure_noul", cardIds: ["card-a", "card-b"] },
       { stage: "structure_noul", cardIds: ["card-a1", "card-b1"] },
       { stage: "content_noul", cardIds: ["card-a2", "card-b2"] },
-      { stage: "sufficiency_noul", cardIds: ["card-a2"] },
+      { stage: "sufficiency_noul", cardIds: ["card-a2", "card-b2"] },
       { stage: "content_noul", cardIds: ["card-a-leaf", "card-b-leaf"] },
-      { stage: "sufficiency_noul", cardIds: ["card-a2", "card-b-leaf"] },
+      { stage: "sufficiency_noul", cardIds: ["card-a2", "card-b-leaf", "card-a-leaf", "card-b2"] },
     ]);
     expect(response.query).toBe("게임 규칙");
     expect(response.status).toBe("complete");
     expect(response.complete).toBe(true);
-    expect(response.results.map((result) => result.card_id)).toEqual(["card-a2", "card-b-leaf"]);
+    expect(response.results.map((result) => result.card_id)).toEqual(["card-a2", "card-b-leaf", "card-a-leaf", "card-b2"]);
     expect(response.results[0]?.selected_from_step_id).toBe(selectionStep?.id);
-    expect(selectionStep?.selection_threshold).toBeCloseTo(0.7);
+    expect(selectionStep?.selection_threshold).toBeCloseTo(0.5);
     expect(structureStep?.decisions.map((decision) => decision.action)).toEqual(["queued", "queued"]);
     expect(structureRequest.state).toMatchObject({ stage: "structure_noul", user_prompt: "게임 규칙" });
     expect(structureRequest.state.candidates.map((candidate) => candidate.card_id)).toEqual(["card-a", "card-b"]);

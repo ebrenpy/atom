@@ -125,7 +125,7 @@ export function recordSelection<T extends {
   const threshold = selectionThreshold(scored.map((item) => item.score), policy);
   const selected = selectFeedCards(
     scored.map((item) => ({ ...item, order: item.candidate.discoveryOrder })),
-    { scoreFloor: policy.scoreFloor, relativeScoreDelta: policy.relativeScoreDelta, maxResults: limit },
+    { scoreFloor: policy.scoreFloor, structureThreshold: policy.structureThreshold, relativeScoreDelta: policy.relativeScoreDelta, maxResults: limit },
   );
   const selectedRefs = new Set(selected.map((item) => item.candidate.ref));
   step.selection_threshold = threshold;

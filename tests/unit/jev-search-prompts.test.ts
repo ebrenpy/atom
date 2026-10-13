@@ -32,7 +32,10 @@ describe("Jev prompt and selection contracts", () => {
     expect(JSON.parse(payload.state).stage).toBe("sufficiency_noul");
     expect(payload.questions.sufficiency_0.instructions).toContain("찾은 카드:");
     expect(payload.questions.sufficiency_0.instructions).toContain("게임 규칙과 적용 사례를 모은다.");
-    expect(payload.questions.sufficiency_0.criteria.true).toBe("이 카드들만 읽으면 요청에 답할 수 있다.");
+    expect(JSON.parse(payload.state).instructions[0]).toBe("후보는 지금까지 찾은 Atom 지식 카드 묶음이다. 요청이 찾는 것이 이 묶음 안에 있는지 판단한다.");
+    expect(payload.questions.sufficiency_0.instructions).toContain("요청이 찾는 것이 이 카드들 안에 있는지 판단하세요.");
+    expect(payload.questions.sufficiency_0.criteria.true).toBe("요청이 찾는 것이 이 카드들 안에 있다.");
+    expect(payload.questions.sufficiency_0.criteria.false).toBe("요청이 찾는 것이 이 카드들 안에 없다.");
   });
   it("builds the v3 structure meaning payload with actual child summaries", () => {
     const payload = buildStructurePayload("이렐리아 특성", context, [candidate], "read");
@@ -57,16 +60,20 @@ describe("Jev prompt and selection contracts", () => {
     expect(payload.questions["content_0"]?.instructions).toContain("게임 규칙과 적용 사례를 모은다.");
   });
 
-  it("keeps the 0.30 floor and 0.10 relative selection threshold", () => {
+  it("11 caps the relative threshold at the structure gate while preserving the floor", () => {
+    const policy = { scoreFloor: 0.3, structureThreshold: 0.5, relativeScoreDelta: 0.1, maxResults: 6 };
     const feed = [
-      { cardId: "a", score: 0.8, order: 0 },
+      { cardId: "a", score: 0.93, order: 0 },
       { cardId: "b", score: 0.7, order: 1 },
       { cardId: "c", score: 0.69, order: 2 },
       { cardId: "d", score: 0.3, order: 3 },
     ];
 
-    expect(selectionThreshold(feed.map((item) => item.score), { scoreFloor: 0.3, relativeScoreDelta: 0.1 })).toBeCloseTo(0.7);
-    expect(selectFeedCards(feed, { scoreFloor: 0.3, relativeScoreDelta: 0.1, maxResults: 6 }).map((item) => item.cardId)).toEqual(["a", "b"]);
+    expect(selectionThreshold(feed.map((item) => item.score), policy)).toBeCloseTo(0.5);
+    expect(selectFeedCards(feed, policy).map((item) => item.cardId)).toEqual(["a", "b", "c"]);
+    const low = [0.45, 0.35, 0.34, 0.3].map((score, order) => ({ score, order }));
+    expect(selectionThreshold(low.map(item => item.score), policy)).toBeCloseTo(0.35);
+    expect(selectFeedCards(low, policy).map(item => item.score)).toEqual([0.45, 0.35]);
   });
 
   it("reads only the longest ordered batch within the serialized payload budget", () => {
