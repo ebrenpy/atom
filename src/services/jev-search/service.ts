@@ -103,7 +103,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
         catch (cause) { failure = cause; }
       }
     }));
-    const frontier: SearchCandidate[] = [], hits: SearchCandidate[] = [];
+    const frontier: SearchCandidate[] = catalog.rootFrontier.splice(0), hits: SearchCandidate[] = [];
     jobs.forEach((job, index) => {
       const scores = scoresByJob[index];
       if (!scores) return;

@@ -31,6 +31,7 @@ export class JevSearchCatalog {
   readonly firstByCard = new Map<string, SearchCandidate>();
   readonly opened = new Set<string>();
   readonly deferred: DeferredGroup[] = [];
+  readonly rootFrontier: SearchCandidate[] = [];
   structures: SearchCandidate[] = [];
   content: SearchCandidate[] = [];
   rootPath: string[] = [];
@@ -165,10 +166,10 @@ export class JevSearchCatalog {
       step.parent_ref = parent?.ref ?? null;
       const nodeId = parent?.nodeId ?? this.rootId;
       const call = this.run.beginCall(step, "atom_outline", 0, outlineAuditRequest(nodeId, 2, this.policy.summaryChars, step.purpose, step.parent_ref));
-      return { parent, step, call, read: this.deps.getTreeOutline(nodeId, 2, this.policy.summaryChars) };
+      return { parent, step, call, nodeId, read: this.deps.getTreeOutline(nodeId, 2, this.policy.summaryChars) };
     });
     const values = await Promise.allSettled(reads.map(r => r.read));
-    return () => { reads.forEach(({ parent, step, call }, index) => {
+    return () => { reads.forEach(({ parent, step, call, nodeId }, index) => {
       const value = values[index];
       if (value.status === "rejected" || !value.value) { this.readFailure(step, call, "ATOM_OUTLINE_FAILED", "Atom tree outline read failed."); return; }
       const outline = value.value;
@@ -178,7 +179,18 @@ export class JevSearchCatalog {
         if (this.run.limitCode) break;
         const candidate = candidateFromOutline(node, parent?.path ?? this.rootPath, parent?.pathNodeIds ?? this.rootPathNodeIds,
           parent?.ref ?? null, parent ? parent.traversalDepth + 1 : 0);
-        this.register(candidate, step, "outline");
+        const found = this.register(candidate, step, "outline");
+        if (nodeId === null && candidate.cardType === "structure") {
+          if (found) this.structures.pop();
+          const root = found ?? this.firstByCard.get(candidate.cardId);
+          if (root && !this.opened.has(root.cardId)) {
+            this.opened.add(root.cardId);
+            delete root.structureScore;
+            this.rootFrontier.push(root);
+            if (!step.candidate_refs.includes(root.ref)) step.candidate_refs.push(root.ref);
+            step.decisions.push({ ref: root.ref, question_key: null, score: null, action: "opened_root", reused_from_ref: null });
+          }
+        }
       }
       for (const [kind, pool, start] of [["structure", this.structures, structureStart], ["content", this.content, contentStart]] as const) {
         if (pool.length - start > this.policy.deferCandidates) {

@@ -109,7 +109,6 @@ describe("Jev search traversal and trace", () => {
     expect(tree.calls.map((call) => call.nodeId)).toEqual([null, ids.a, ids.b, ids.a1, ids.b1]);
     expect(tree.calls.every((call) => call.depth === 2 && call.excerptChars === 200)).toBe(true);
     expect(judgeCalls).toEqual([
-      { stage: "structure_noul", cardIds: ["card-a", "card-b"] },
       { stage: "structure_noul", cardIds: ["card-a1", "card-b1"] },
       { stage: "content_noul", cardIds: ["card-a2", "card-b2"] },
       { stage: "sufficiency_noul", cardIds: ["card-a2", "card-b2"] },
@@ -124,13 +123,13 @@ describe("Jev search traversal and trace", () => {
     expect(selectionStep?.selection_threshold).toBeCloseTo(0.5);
     expect(structureStep?.decisions.map((decision) => decision.action)).toEqual(["queued", "queued"]);
     expect(structureRequest.state).toMatchObject({ stage: "structure_noul", user_prompt: "게임 규칙" });
-    expect(structureRequest.state.candidates.map((candidate) => candidate.card_id)).toEqual(["card-a", "card-b"]);
+    expect(structureRequest.state.candidates.map((candidate) => candidate.card_id)).toEqual(["card-a1", "card-b1"]);
     expect(structureRequest.questions.structure_0).toMatchObject({
       type: "noul",
       instructions: expect.stringContaining("요청: 게임 규칙"),
       criteria: { true: expect.stringContaining("구조의 성격"), false: expect.any(String) },
     });
-    expect(structureRequest.questions.structure_0.instructions).toContain("짧은 설명: A 모음");
+    expect(structureRequest.questions.structure_0.instructions).toContain("짧은 설명: A의 다음 구조");
     expect(structureRequest.questions.structure_0.instructions).toContain("직계 자식");
     for (const step of response.trace.steps.filter((item) => item.stage === "structure_noul" || item.stage === "content_noul")) {
       const call = response.trace.calls.find((item) => item.call_id === step.call_id);
@@ -177,14 +176,13 @@ describe("Jev search traversal and trace", () => {
 
     expect(calls).toEqual([
       { nodeId: null, depth: 2, excerptChars: 200 },
-      { nodeId: aliasId, depth: 1, excerptChars: 0 },
       { nodeId: aliasId, depth: 2, excerptChars: 200 },
     ]);
     expect(aliasedOccurrence).toBeDefined();
     expect(discoveredOccurrence?.canonical_node_id).toBeNull();
     expect(aliasedOccurrence?.canonical_node_id).toBeNull();
     expect(response.trace.steps.flatMap((step) => step.decisions).find((decision) => decision.ref === aliasedOccurrence?.ref)).toMatchObject({ action: "alias", reused_from_ref: expect.any(String) });
-    expect(summaryStep?.canonical_node_id).toBe(canonicalId);
+    expect(summaryStep).toBeUndefined();
     expect(expansionStep?.canonical_node_id).toBe(canonicalId);
     expect(child).toMatchObject({ physical_parent_node_id: canonicalId, traversal_parent_ref: expect.any(String) });
     expect(child?.traversal_parent_ref).not.toBeNull();
@@ -209,14 +207,14 @@ describe("Jev search traversal and trace", () => {
       searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: tree.getTreeOutline,
-      judge: async (payload) => answerPayload(payload, (stage) => stage === "structure_noul" ? 0.49 : 1),
+      judge: async (payload) => answerPayload(payload, (stage) => stage === "structure_noul" ? 0.49 : 0.1),
     });
 
     expect(response.trace.steps.find((step) => step.stage === "structure_noul")?.decisions).toEqual([
       expect.objectContaining({ score: 0.49, action: "pruned" }),
       expect.objectContaining({ score: 0.49, action: "pruned" }),
     ]);
-    expect(tree.calls.map((call) => call.nodeId)).toEqual([null]);
+    expect(tree.calls.map((call) => call.nodeId)).toEqual([null, ids.a, ids.b]);
     expect(response.results).toEqual([]);
   });
 
@@ -236,11 +234,11 @@ describe("Jev search traversal and trace", () => {
     expect(response.trace.steps.at(-1)).toMatchObject({ stage: "run_terminal", terminal_status: "error" });
     expect(response.trace.calls.at(-1)?.error?.message).not.toContain("raw");
     expect(response.trace.steps.find((step) => step.stage === "structure_noul")?.decisions).toEqual([]);
-    const request = response.trace.calls.at(-1)?.request as {
+    const request = response.trace.calls.find(call => call.stage === "structure_noul")?.request as {
       questions: Record<string, { instructions: string; criteria: { true: string; false: string } }>;
     };
     expect(request.questions.structure_0.instructions).toContain("요청: 게임 규칙");
-    expect(request.questions.structure_0.instructions).toContain("짧은 설명: A 모음");
+    expect(request.questions.structure_0.instructions).toContain("짧은 설명: A의 다음 구조");
     expect(request.questions.structure_0.instructions).toContain("직계 자식");
     expect(request.questions.structure_0.criteria.true).toContain("구조의 성격");
     expect(JSON.stringify(request)).not.toMatch(/Bearer\s|authorization|TYPESAFE_/i);
