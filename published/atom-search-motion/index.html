@@ -24,687 +24,1560 @@
   <meta name="twitter:description" content="검색 결과가 노드로 펼쳐지는 공간">
   <meta name="twitter:image" content="https://pub-236dc9dc170e487faec4c8b5e2d084c6.r2.dev/pages/atom-search-motion/fc793002d99d/og-node-diagram.png">
   <meta name="twitter:image:alt" content="atom 검색 결과가 노드로 펼쳐지는 다이어그램">
-  <style>
-    :root {
-      color-scheme: light;
-      --apple-bg: #f5f5f7;
-      --apple-surface: #ffffff;
-      --apple-surface-muted: #f2f2f7;
-      --apple-material: rgb(255 255 255 / 72%);
-      --apple-label: #1d1d1f;
-      --apple-label-secondary: #6e6e73;
-      --apple-label-tertiary: #86868b;
-      --apple-label-inverse: #ffffff;
-      --apple-separator: rgb(0 0 0 / 12%);
-      --apple-separator-strong: rgb(0 0 0 / 24%);
-      --apple-accent: #0071e3;
-      --apple-accent-hover: #0077ed;
-      --apple-accent-soft: rgb(0 113 227 / 10%);
-      --apple-focus: rgb(0 113 227 / 42%);
-      --apple-warning: #9a6700;
-      --apple-font:
-        "Pretendard Variable",
-        Pretendard,
-        -apple-system,
-        BlinkMacSystemFont,
-        system-ui,
-        "Apple SD Gothic Neo",
-        "Segoe UI",
-        "Malgun Gothic",
-        sans-serif;
-      --apple-title-1: clamp(2rem, 5vw, 3rem);
-      --apple-title-2: 1.5rem;
-      --apple-body: 1.0625rem;
-      --apple-reading: 1.125rem;
-      --apple-content: 0.9375rem;
-      --apple-small: 0.875rem;
-      --apple-caption: 0.8125rem;
-      --apple-space-1: 0.25rem;
-      --apple-space-2: 0.5rem;
-      --apple-space-3: 0.75rem;
-      --apple-space-4: 1rem;
-      --apple-space-6: 1.5rem;
-      --apple-space-8: 2rem;
-      --apple-space-12: 3rem;
-      --apple-radius-control: 0.625rem;
-      --apple-radius-card: 1.125rem;
-      --apple-radius-panel: 1.5rem;
-      --apple-radius-pill: 999px;
-      --apple-shadow-low:
-        0 1px 2px rgb(0 0 0 / 6%),
-        0 4px 14px rgb(0 0 0 / 5%);
-      --apple-shadow-medium: 0 12px 40px rgb(0 0 0 / 12%);
-      --apple-blur: 1.25rem;
-      --apple-saturation: 180%;
-      --apple-content-width: 72rem;
-      --apple-control-height: 2.75rem;
-      --apple-ease: cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    :root[data-theme="dark"] {
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- Single-file publication: the approved canvas renderer stays inline so html-publish preserves its complete runtime. -->
+<style>
+  /* 글자, 간격, 접근성의 토대는 html-make의 Apple 프리셋. 그래프의 모양과 색(--g-*)은 레퍼런스 화면에서 가져온다. */
+  :root {
+    color-scheme: light;
+    --shell: #ffffff;
+    --label: #1d1d1f;
+    --label-2: #5f6672;
+    --label-3: #86868b;
+    --sep: rgb(0 0 0 / 12%);
+    --sep-strong: rgb(0 0 0 / 24%);
+    --material: rgb(255 255 255 / 86%);
+    --focus: rgb(0 113 227 / 55%);
+    --shadow: 0 12px 40px rgb(0 0 0 / 14%);
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px;
+    --radius: 8px;
+    --control: 44px;
+    --tool: 36px;
+    --t-body: 17px; --t-content: 15px; --t-small: 14px; --t-caption: 13px;
+    --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+    --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+    /* 그래프 */
+    --g-plot: #eef2f6;
+    --g-node: #ffffff;
+    --g-node-line: #c2c9d4;
+    --g-know: #a4588f;
+    --g-know-fill: #eddbe8;
+    --g-struct: #4c72ad;
+    --g-struct-fill: #d5dfef;
+    --g-path: #27468a;
+    --g-thin: #a9b2c0;
+    --g-low-text: #7d8796;
+    --g-low-line: #bfc7d2;
+    --g-jev: #d97a1c;
+    --g-ok: #1b8a55;
+    --g-evidence: #f6b81e;
+    --g-evidence-ink: #3a2a00;
+    --g-ink: #1d1d1f;
+    --g-ink-2: #56606e;
+    --g-stop-fill: #fde6c8;
+    --g-stop-ink: #a3510a;
+    --g-sel-base: #1d1d1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --apple-bg: #000000;
-      --apple-surface: #1d1d1f;
-      --apple-surface-muted: #2c2c2e;
-      --apple-material: rgb(28 28 30 / 72%);
-      --apple-label: #f5f5f7;
-      --apple-label-secondary: #a1a1a6;
-      --apple-label-tertiary: #8e8e93;
-      --apple-label-inverse: #1d1d1f;
-      --apple-separator: rgb(255 255 255 / 16%);
-      --apple-separator-strong: rgb(255 255 255 / 30%);
-      --apple-accent: #2997ff;
-      --apple-accent-hover: #40a9ff;
-      --apple-accent-soft: rgb(41 151 255 / 16%);
-      --apple-focus: rgb(41 151 255 / 52%);
-      --apple-warning: #ffd60a;
+      --shell: #1c1c1e; --label: #f5f5f7; --label-2: #b3b8c2; --label-3: #8e8e93;
+      --sep: rgb(255 255 255 / 16%); --sep-strong: rgb(255 255 255 / 30%);
+      --material: rgb(36 36 38 / 90%); --focus: rgb(41 151 255 / 62%); --shadow: 0 12px 40px rgb(0 0 0 / 50%);
+      --g-plot: #12151b; --g-node: #20242c; --g-node-line: #4a5262;
+      --g-know: #d195bf; --g-know-fill: #46303f; --g-struct: #8fb0e6; --g-struct-fill: #26344f;
+      --g-path: #a9c2f5; --g-thin: #5b6474; --g-low-text: #7c8594; --g-low-line: #4a5261;
+      --g-jev: #f0a04a; --g-ok: #4ccf8e; --g-evidence: #f6b81e; --g-evidence-ink: #2b1f00;
+      --g-ink: #f5f5f7; --g-ink-2: #b3b8c2; --g-stop-fill: #4a3214; --g-stop-ink: #ffc98a; --g-sel-base: #05070a;
     }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --shell: #1c1c1e; --label: #f5f5f7; --label-2: #b3b8c2; --label-3: #8e8e93;
+    --sep: rgb(255 255 255 / 16%); --sep-strong: rgb(255 255 255 / 30%);
+    --material: rgb(36 36 38 / 90%); --focus: rgb(41 151 255 / 62%); --shadow: 0 12px 40px rgb(0 0 0 / 50%);
+    --g-plot: #12151b; --g-node: #20242c; --g-node-line: #4a5262;
+    --g-know: #d195bf; --g-know-fill: #46303f; --g-struct: #8fb0e6; --g-struct-fill: #26344f;
+    --g-path: #a9c2f5; --g-thin: #5b6474; --g-low-text: #7c8594; --g-low-line: #4a5261;
+    --g-jev: #f0a04a; --g-ok: #4ccf8e; --g-evidence: #f6b81e; --g-evidence-ink: #2b1f00;
+    --g-ink: #f5f5f7; --g-ink-2: #b3b8c2; --g-stop-fill: #4a3214; --g-stop-ink: #ffc98a; --g-sel-base: #05070a;
+  }
+  @media (prefers-contrast: more) {
+    :root { --sep: rgb(0 0 0 / 40%); --sep-strong: rgb(0 0 0 / 70%); --g-low-text: #5b6472; --g-low-line: #7b8492; --g-thin: #6b7482; --label-2: #3b424d; }
+  }
 
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme]) {
-        color-scheme: dark;
-        --apple-bg: #000000;
-        --apple-surface: #1d1d1f;
-        --apple-surface-muted: #2c2c2e;
-        --apple-material: rgb(28 28 30 / 72%);
-        --apple-label: #f5f5f7;
-        --apple-label-secondary: #a1a1a6;
-        --apple-label-tertiary: #8e8e93;
-        --apple-label-inverse: #1d1d1f;
-        --apple-separator: rgb(255 255 255 / 16%);
-        --apple-separator-strong: rgb(255 255 255 / 30%);
-        --apple-accent: #2997ff;
-        --apple-accent-hover: #40a9ff;
-        --apple-accent-soft: rgb(41 151 255 / 16%);
-        --apple-focus: rgb(41 151 255 / 52%);
-        --apple-warning: #ffd60a;
-      }
-    }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--shell); color: var(--label);
+    font: 400 var(--t-content)/1.5 var(--font); font-optical-sizing: auto;
+    word-break: keep-all; overflow-wrap: break-word;
+    -webkit-text-size-adjust: 100%;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { touch-action: manipulation; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-    * { box-sizing: border-box; }
+  .app {
+    display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr);
+    gap: var(--space-2);
+    height: 100dvh; min-height: 560px;
+    padding: var(--space-3) max(var(--space-4), env(safe-area-inset-right)) max(var(--space-4), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
+  }
 
-    html {
-      min-width: 20rem;
-      scroll-behavior: smooth;
-      background: var(--apple-bg);
-    }
+  /* 머리: 제목, 시안 표시, 표본 고르기, 로그인 자리 */
+  .topbar { display: flex; align-items: center; gap: var(--space-3); min-height: var(--control); }
+  .topbar h1 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.2; letter-spacing: -0.015em; white-space: nowrap; }
+  .draft { padding: 2px var(--space-2); border: 1px dashed var(--sep-strong); border-radius: 6px; color: var(--label-2); font-size: var(--t-caption); font-weight: 600; line-height: 1.5; white-space: nowrap; }
+  .seg { display: inline-flex; padding: 2px; border: 1px solid var(--sep-strong); border-radius: var(--radius); }
+  .seg button { min-width: 48px; height: 32px; padding: 0 var(--space-3); border: 0; border-radius: 6px; background: transparent; color: var(--label-2); font-size: var(--t-small); font-weight: 600; cursor: pointer; position: relative; }
+  .seg button::after { content: ""; position: absolute; inset: -6px 0; }
+  .seg button[aria-checked="true"] { background: var(--g-path); color: var(--shell); }
+  .grow { flex: 1; }
+  .btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: var(--control); padding: 0 var(--space-4); border: 1px solid var(--sep-strong); border-radius: var(--radius); background: var(--shell); color: var(--label); font-size: var(--t-body); font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; transition: transform 100ms ease-out, opacity 160ms linear; }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn.primary { border-color: transparent; background: var(--g-path); color: var(--shell); padding: 0 var(--space-6); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn.small { height: var(--tool); padding: 0 var(--space-3); font-size: var(--t-small); position: relative; }
+  .btn.small::after { content: ""; position: absolute; inset: -4px 0; }
+  .btn.toggle[aria-pressed="true"] { border-color: var(--g-path); color: var(--g-path); box-shadow: inset 0 0 0 1px var(--g-path); }
 
-    body {
-      scrollbar-color: var(--apple-label-tertiary) transparent;
-      scrollbar-width: thin;
-    }
+  /* 검색 */
+  .search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
+  .search input { width: 100%; min-width: 0; height: var(--control); padding: 0 var(--space-4); border: 1px solid var(--sep-strong); border-radius: var(--radius); background: var(--shell); font-size: var(--t-body); line-height: 1.3; }
+  .search input::-webkit-search-cancel-button { display: none; }
 
-    ::-webkit-scrollbar { width: var(--apple-space-2); height: var(--apple-space-2); }
-    ::-webkit-scrollbar-thumb { border-radius: var(--apple-radius-pill); background: var(--apple-label-tertiary); }
-    ::-webkit-scrollbar-track { background: transparent; }
+  /* 결과: 서버가 끝나는 즉시 채운다. 그래프 재생 위치와 무관하다 */
+  .outcome { display: flex; align-items: center; gap: var(--space-3); min-width: 0; min-height: var(--control); }
+  .tray { display: flex; flex: 1; min-width: 0; gap: var(--space-2); margin: 0; padding: 2px; list-style: none; overflow-x: auto; scrollbar-width: none; }
+  .tray::-webkit-scrollbar { display: none; }
+  .tray li { flex: 0 1 auto; min-width: 150px; }
+  .rchip { display: inline-flex; align-items: center; gap: var(--space-2); width: 100%; max-width: 340px; height: var(--tool); padding: 0 var(--space-3) 0 var(--space-2); border: 0; border-radius: var(--radius); background: var(--g-evidence); color: var(--g-evidence-ink); font-size: var(--t-content); font-weight: 600; cursor: pointer; position: relative; animation: chip-in 420ms var(--ease) both; animation-delay: calc(var(--i) * 70ms); transition: transform 100ms ease-out; }
+  .rchip::after { content: ""; position: absolute; inset: -4px 0; }
+  .rchip:active { transform: scale(0.97); }
+  .rchip b { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border-radius: 5px; background: rgb(0 0 0 / 14%); font-size: var(--t-caption); font-weight: 700; }
+  .rchip span { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rchip i { font-style: normal; font-weight: 500; font-variant-numeric: tabular-nums; opacity: 0.78; }
+  .tray .none { color: var(--label-2); font-size: var(--t-small); line-height: var(--tool); }
+  @keyframes chip-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .more { flex: none; }
+  .summary { margin: 0; color: var(--label-2); font-size: var(--t-small); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-    body {
-      min-height: 100vh;
-      margin: 0;
-      background: var(--apple-bg);
-      color: var(--apple-label);
-      font-family: var(--apple-font);
-      font-size: var(--apple-body);
-      font-optical-sizing: auto;
-      line-height: 1.53;
-      word-break: keep-all;
-      overflow-wrap: break-word;
-    }
+  /* 그래프 판 */
+  .board { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; border: 1px solid var(--sep); border-radius: 12px; overflow: hidden; background: var(--shell); }
+  .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 6px var(--space-2); border-bottom: 1px solid var(--sep); }
+  .tool { position: relative; display: inline-grid; place-items: center; width: var(--tool); height: var(--tool); padding: 0; border: 1px solid var(--sep-strong); border-radius: var(--radius); background: var(--shell); color: var(--label); cursor: pointer; transition: transform 100ms ease-out, background-color 160ms linear; }
+  .tool::after { content: ""; position: absolute; inset: -4px; }
+  .tool:active:not(:disabled) { transform: scale(0.94); }
+  .tool:disabled { opacity: 0.35; cursor: default; }
+  .tool svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
+  .tool svg.line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .tool.play { border-color: transparent; background: var(--g-path); color: var(--shell); }
+  .count { min-width: 50px; margin-left: 6px; color: var(--g-path); font-size: var(--t-content); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .narr { width: 124px; color: var(--label-2); font-size: var(--t-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scrub { display: flex; flex: 1 1 140px; min-width: 100px; max-width: 420px; height: var(--tool); align-items: center; margin: 0 6px; }
+  .scrub input { width: 100%; height: 28px; margin: 0; background: transparent; accent-color: var(--g-path); cursor: pointer; }
+  .skip.off { visibility: hidden; }
+  .break { display: none; }
+  .zoom { min-width: 44px; color: var(--label-2); font-size: var(--t-caption); font-variant-numeric: tabular-nums; text-align: center; }
+  .right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
-    button, input { font: inherit; }
-    button, a { -webkit-tap-highlight-color: transparent; }
-    [hidden] { display: none !important; }
+  .stage { position: relative; min-height: 0; overflow: hidden; }
+  .plot { position: absolute; inset: 0; background: var(--g-plot); overflow: hidden; touch-action: none; cursor: grab; }
+  .plot.dragging { cursor: grabbing; }
+  .plot.pointing { cursor: pointer; }
+  .plot:focus-visible { outline-offset: -3px; }
+  .plot canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .legend { position: absolute; left: var(--space-3); bottom: var(--space-2); display: flex; gap: var(--space-3); margin: 0; padding: 3px var(--space-2); border-radius: 6px; background: var(--material); list-style: none; color: var(--label-2); font-size: var(--t-caption); line-height: 1.5; pointer-events: none; }
+  .legend li { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .legend .sw { width: 14px; height: 10px; border: 1.5px solid; border-left-width: 4px; border-radius: 2px; }
+  .legend .sw.s { border-color: var(--g-struct); background: var(--g-struct-fill); border-left-style: double; border-left-width: 5px; }
+  .legend .sw.k { border-color: var(--g-know); background: var(--g-know-fill); }
+  .legend .ln { width: 18px; height: 0; border-top: 2.5px solid var(--g-path); }
+  .legend .ln.c { border-top: 1.5px dashed var(--g-thin); }
+  .legend .ln.p { border-top: 3px dashed var(--g-evidence); background: var(--g-path); height: 3px; border-top-width: 3px; }
+  .btn.small.follow { position: absolute; right: var(--space-3); bottom: var(--space-2); background: var(--material); }
 
-    :focus-visible {
-      outline: 0.125rem solid var(--apple-focus);
-      outline-offset: 0.1875rem;
-    }
+  /* 가리켰을 때만 보이는 근거: Jev에 보낸 글, 점수, 열거나 버린 까닭 */
+  .pop { position: absolute; z-index: 3; width: max-content; max-width: min(360px, calc(100% - 16px)); padding: var(--space-2) var(--space-3); border: 1px solid var(--sep); border-radius: 10px; background: var(--material); box-shadow: var(--shadow); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity 120ms linear, transform 160ms var(--ease); }
+  .pop.on { opacity: 1; transform: none; }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .pop, .sheet { -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%); }
+  }
+  .pop-verdict { display: flex; align-items: baseline; gap: var(--space-2); margin: 0; font-size: var(--t-small); font-weight: 600; }
+  .pop-verdict b { font-size: var(--t-body); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pop-verdict.ok b { color: var(--g-path); }
+  .pop-verdict.no { color: var(--label-2); }
+  .pop-match { margin: 4px 0 0; color: var(--label-2); font-size: var(--t-caption); }
+  .sent { margin: 6px 0 0; padding: 6px var(--space-2); border-left: 3px solid var(--g-jev); border-radius: 0 6px 6px 0; background: rgb(127 127 127 / 10%); color: var(--label); font: 400 var(--t-caption)/1.5 var(--font); white-space: pre-wrap; }
+  .sent-label { display: block; color: var(--g-jev); font-weight: 700; }
 
-    .app-shell {
-      width: min(calc(100% - 2 * var(--apple-space-6)), var(--apple-content-width));
-      margin-inline: auto;
-      padding-block: var(--apple-space-8) var(--apple-space-12);
-    }
+  /* 원문 자리 */
+  .sheet { position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: min(400px, 100%); display: flex; flex-direction: column; border-left: 1px solid var(--sep); background: var(--material); box-shadow: var(--shadow); transform: translateX(104%); transition: transform 380ms var(--ease); overflow: hidden; }
+  .sheet.open { transform: none; }
+  .sheet-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: start; padding: var(--space-3) var(--space-3) var(--space-2) var(--space-4); }
+  .sheet-head h2 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
+  .sheet-head h2:focus { outline: none; }
+  .sheet-path { margin: 2px 0 0; color: var(--label-2); font-size: var(--t-small); }
+  .sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--space-4) var(--space-4); scrollbar-width: thin; }
+  .sheet-body .pop-verdict { margin-bottom: var(--space-2); }
+  .sheet details { margin: var(--space-2) 0 var(--space-3); }
+  .sheet summary { display: flex; align-items: center; min-height: var(--control); color: var(--g-jev); font-size: var(--t-small); font-weight: 700; cursor: pointer; }
+  .sheet .sent { margin-top: 0; }
+  .origin { padding-top: var(--space-3); border-top: 1px solid var(--sep); }
+  .origin p { margin: 0 0 var(--space-3); font-size: var(--t-body); line-height: 1.6; }
+  .skeleton { display: grid; gap: 10px; }
+  .skeleton i { display: block; height: 12px; border-radius: 6px; background: rgb(127 127 127 / 16%); }
+  .origin-note { margin-top: var(--space-4) !important; color: var(--label-3); font-size: var(--t-caption) !important; }
 
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--apple-space-4);
-      margin-bottom: var(--apple-space-8);
-    }
-
-    h1 {
-      margin: 0;
-      font-size: var(--apple-title-1);
-      font-weight: 750;
-      line-height: 1.08;
-      letter-spacing: -0.025em;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: var(--apple-title-2);
-      font-weight: 700;
-      line-height: 1.22;
-      letter-spacing: -0.015em;
-    }
-
-    .auth-actions,
-    .search-actions,
-    .detail-actions {
-      display: flex;
-      align-items: center;
-      gap: var(--apple-space-3);
-    }
-
-    .apple-button {
-      display: inline-flex;
-      min-height: var(--apple-control-height);
-      align-items: center;
-      justify-content: center;
-      padding-inline: var(--apple-space-4);
-      border: 0.0625rem solid transparent;
-      border-radius: var(--apple-radius-pill);
-      background: var(--apple-accent);
-      color: var(--apple-label-inverse);
-      font-size: var(--apple-body);
-      font-weight: 650;
-      line-height: 1.2;
-      text-decoration: none;
-      cursor: pointer;
-      touch-action: manipulation;
-      transition:
-        transform 100ms ease-out,
-        background-color 180ms var(--apple-ease),
-        opacity 180ms linear;
-    }
-
-    .apple-button:hover { background: var(--apple-accent-hover); }
-    .apple-button:active { transform: scale(0.98); }
-    .apple-button:disabled { cursor: not-allowed; opacity: 0.52; }
-
-    .apple-button--secondary {
-      border-color: var(--apple-separator);
-      background: var(--apple-surface);
-      color: var(--apple-label);
-    }
-
-    .apple-button--secondary:hover { background: var(--apple-surface-muted); }
-
-    .search-form {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: var(--apple-space-3);
-    }
-
-    .search-input {
-      width: 100%;
-      min-width: 0;
-      min-height: var(--apple-control-height);
-      padding: var(--apple-space-2) var(--apple-space-4);
-      border: 0.0625rem solid var(--apple-separator-strong);
-      border-radius: var(--apple-radius-control);
-      background: var(--apple-surface);
-      color: var(--apple-label);
-      font-size: var(--apple-body);
-      line-height: 1.35;
-    }
-
-    .search-input::placeholder { color: var(--apple-label-tertiary); opacity: 1; }
-    .search-input:disabled { opacity: 0.66; }
-
-    .search-feedback {
-      display: flex;
-      min-height: var(--apple-control-height);
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--apple-space-4);
-      margin-block: var(--apple-space-3) var(--apple-space-8);
-    }
-
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    .apple-muted {
-      margin: 0;
-      color: var(--apple-label-secondary);
-      font-size: var(--apple-small);
-      line-height: 1.45;
-    }
-
-    .apple-muted[data-kind="error"] { color: var(--apple-warning); font-weight: 600; }
-    .auth-message { margin: 0; }
-
-    .workbench {
-      display: grid;
-      grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-      align-items: start;
-      gap: var(--apple-space-8);
-    }
-
-    .apple-diagram {
-      position: relative;
-      min-width: 0;
-      overflow: hidden;
-      padding: var(--apple-space-6);
-      border: 0.0625rem solid var(--apple-separator);
-      border-radius: var(--apple-radius-panel);
-      background: var(--apple-surface);
-      box-shadow: var(--apple-shadow-low);
-    }
-
-    .network {
-      position: relative;
-      display: grid;
-      grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
-      align-items: center;
-      column-gap: var(--apple-space-8);
-      min-width: 0;
-    }
-
-    .connections {
-      position: absolute;
-      z-index: 0;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      overflow: visible;
-      pointer-events: none;
-    }
-
-    .connection {
-      fill: none;
-      stroke: var(--apple-accent);
-      stroke-width: 0.125rem;
-      stroke-linecap: round;
-      opacity: 0.28;
-      transition: opacity 160ms linear, stroke-width 160ms linear;
-    }
-
-    .connection.is-selected {
-      stroke-width: 0.1875rem;
-      opacity: 0.92;
-    }
-
-    .query-node {
-      position: relative;
-      z-index: 1;
-      min-width: 0;
-      padding: var(--apple-space-4);
-      border: 0.0625rem solid var(--apple-separator-strong);
-      border-radius: var(--apple-radius-card);
-      background: var(--apple-surface-muted);
-    }
-
-    .query-label,
-    .result-snippet,
-    .breadcrumb { margin: 0; }
-
-    .query-label {
-      margin-bottom: var(--apple-space-2);
-      color: var(--apple-label-secondary);
-      font-size: var(--apple-caption);
-      font-weight: 650;
-    }
-
-    .query-value {
-      overflow-wrap: anywhere;
-      font-size: var(--apple-body);
-      font-weight: 650;
-      line-height: 1.45;
-    }
-
-    .query-state {
-      display: flex;
-      min-height: var(--apple-control-height);
-      align-items: center;
-      gap: var(--apple-space-2);
-      margin-top: var(--apple-space-3);
-      color: var(--apple-label-secondary);
-      font-size: var(--apple-small);
-    }
-
-    .loading-mark {
-      width: var(--apple-space-3);
-      height: var(--apple-space-3);
-      flex: 0 0 auto;
-      border: 0.125rem solid var(--apple-separator-strong);
-      border-top-color: var(--apple-accent);
-      border-radius: var(--apple-radius-pill);
-      animation: search-spin 900ms linear infinite;
-    }
-
-    @keyframes search-spin { to { transform: rotate(360deg); } }
-
-    .result-list {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: var(--apple-space-4);
-      min-width: 0;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .result-item { min-width: 0; }
-
-    .result-node {
-      width: 100%;
-      min-width: 0;
-      align-items: flex-start;
-      flex-direction: column;
-      gap: var(--apple-space-2);
-      padding: var(--apple-space-4);
-      border-color: var(--apple-separator);
-      border-radius: var(--apple-radius-card);
-      box-shadow: var(--apple-shadow-low);
-      text-align: left;
-      overflow-wrap: anywhere;
-    }
-
-    .result-node:hover { border-color: var(--apple-accent); }
-
-    .result-node[aria-pressed="true"] {
-      border-color: var(--apple-accent);
-      background: var(--apple-accent-soft);
-      box-shadow: 0 0 0 0.0625rem var(--apple-accent);
-    }
-
-    .result-title {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      color: var(--apple-label);
-      font-size: var(--apple-body);
-      font-weight: 700;
-      line-height: 1.35;
-      text-overflow: ellipsis;
-    }
-
-    .breadcrumb {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 1;
-      color: var(--apple-label-secondary);
-      font-size: var(--apple-caption);
-      font-weight: 550;
-      line-height: 1.4;
-      text-overflow: ellipsis;
-    }
-
-    .result-snippet {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      color: var(--apple-label-secondary);
-      font-size: var(--apple-small);
-      font-weight: 400;
-      line-height: 1.45;
-      text-overflow: ellipsis;
-    }
-
-    .original-panel { min-width: 0; }
-    .original-panel:empty { min-height: 0; }
-
-    .apple-details {
-      border-top: 0.0625rem solid var(--apple-separator);
-      border-bottom: 0.0625rem solid var(--apple-separator);
-    }
-
-    .apple-details summary {
-      padding-block: var(--apple-space-4);
-      font-size: var(--apple-body);
-      font-weight: 700;
-      line-height: 1.35;
-      cursor: pointer;
-      overflow-wrap: anywhere;
-    }
-
-    .original-content {
-      padding-bottom: var(--apple-space-6);
-    }
-
-    .original-notice { margin-block: var(--apple-space-4); }
-
-    .detail-actions {
-      flex-wrap: wrap;
-      margin-bottom: var(--apple-space-6);
-    }
-
-    .original-body {
-      margin: 0;
-      color: var(--apple-label);
-      font-family: var(--apple-font);
-      font-size: var(--apple-reading);
-      line-height: 1.65;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      word-break: keep-all;
-    }
-
-    .empty-message {
-      margin: var(--apple-space-4) 0 0;
-      color: var(--apple-label-secondary);
-      font-size: var(--apple-small);
-    }
-
-    html[data-reduce-transparency="true"] .apple-material {
-      background: var(--apple-surface);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-    }
-
-    @media (prefers-reduced-transparency: reduce) {
-      .apple-material {
-        background: var(--apple-surface);
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-      }
-    }
-
-    @media (prefers-contrast: more) {
-      :root { --apple-separator: var(--apple-separator-strong); }
-      .apple-diagram, .query-node, .result-node {
-        background: var(--apple-surface);
-        box-shadow: none;
-      }
-    }
-
-    @media (forced-colors: active) {
-      .apple-button, .apple-diagram, .query-node, .result-node {
-        border: 0.0625rem solid CanvasText;
-        box-shadow: none;
-      }
-      .apple-button { background: ButtonFace; color: ButtonText; }
-      .query-node, .result-node { background: Canvas; color: CanvasText; }
-      .connection { stroke: LinkText; }
-      .query-label, .query-state, .result-snippet, .breadcrumb { color: CanvasText; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      .apple-button, .connection { transition: none; }
-      .apple-button:active { transform: none; opacity: 0.72; }
-      .loading-mark { animation: none; border-top-color: var(--apple-accent); }
-    }
-
-    @media (max-width: 56rem) {
-      .app-shell {
-        width: min(calc(100% - 2 * var(--apple-space-4)), var(--apple-content-width));
-        padding-block-start: var(--apple-space-6);
-      }
-      .workbench { grid-template-columns: minmax(0, 1fr); }
-      .network { grid-template-columns: minmax(0, 1fr); row-gap: var(--apple-space-6); }
-      .result-list {
-        grid-template-columns: minmax(0, 1fr);
-        margin-inline-start: var(--apple-space-6);
-      }
-    }
-
-    @media (max-width: 36rem) {
-      .app-shell { width: calc(100% - 2 * var(--apple-space-4)); }
-      .topbar { align-items: flex-start; flex-direction: column; }
-      .auth-actions, .search-actions { width: 100%; }
-      .auth-actions .apple-button { flex: 1; }
-      .search-form { grid-template-columns: minmax(0, 1fr) auto; }
-      .search-form > .apple-button { padding-inline: var(--apple-space-3); }
-      .search-feedback { align-items: flex-start; }
-      .apple-diagram { padding: var(--apple-space-4); }
-    }
-  </style>
+  @media (max-width: 720px) {
+    :root { --tool: 36px; }
+    .app { gap: 6px; padding-top: var(--space-2); }
+    .topbar { flex-wrap: wrap; gap: var(--space-2); min-height: 0; }
+    .topbar h1 { font-size: 18px; }
+    .topbar .grow { order: 1; }
+    .topbar #login { order: 2; height: 36px; padding: 0 var(--space-3); font-size: var(--t-small); }
+    .topbar .seg { order: 3; }
+    .btn { padding: 0 var(--space-3); font-size: var(--t-content); }
+    .btn.primary { padding: 0 var(--space-4); font-size: var(--t-body); }
+    .tray { padding-right: 20px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); }
+    .tray li { flex: none; min-width: 0; }
+    .rchip { width: auto; max-width: 250px; }
+    .summary .jev { display: none; }
+    .toolbar { gap: 4px 5px; padding: 6px; }
+    .count { min-width: 0; margin-left: 4px; }
+    .narr { width: auto; flex: 1 1 0; min-width: 0; }
+    .skip { order: 3; }
+    .skip.off { display: none; }
+    .break { display: block; order: 4; flex-basis: 100%; height: 0; }
+    .scrub { order: 5; flex: 1 1 0; min-width: 0; max-width: none; margin: 0 var(--space-1); }
+    .right { order: 6; margin-left: 0; }
+    .zoomgroup { display: none; }
+    .legend { gap: var(--space-2); }
+    .sheet { top: auto; left: 0; width: 100%; max-height: 74%; border-left: 0; border-top: 1px solid var(--sep); border-radius: 16px 16px 0 0; transform: translateY(104%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rchip { animation: none; }
+    .btn, .tool, .rchip { transition: opacity 120ms linear; }
+    .btn:active:not(:disabled), .tool:active:not(:disabled), .rchip:active { transform: none; opacity: 0.6; }
+    .sheet, .pop { transition: opacity 120ms linear; }
+    .sheet { transform: none; opacity: 0; }
+    .sheet.open { opacity: 1; }
+    .pop { transform: none; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root { --material: var(--shell); }
+    .pop, .sheet { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+  :root[data-reduce-transparency="true"] { --material: var(--shell); }
+  @media (forced-colors: active) {
+    .seg button[aria-checked="true"], .btn.primary, .tool.play { background: Highlight; color: HighlightText; forced-color-adjust: none; }
+    .rchip { border: 2px solid CanvasText; }
+  }
+</style>
 </head>
 <body>
-  <main class="app-shell">
-    <header class="topbar">
-      <h1>atom 검색</h1>
-      <div class="auth-actions">
-        <p class="apple-muted auth-message" id="auth-message" role="alert" aria-live="assertive" hidden></p>
-        <a class="apple-button" id="login-link" href="https://atom.eiaserinnys.me/api/auth/google?return_to=atom-search-motion" hidden>Google로 로그인</a>
-        <button class="apple-button apple-button--secondary" id="retry-auth" type="button" hidden>다시 시도</button>
-      </div>
-    </header>
+<div class="app">
+  <header class="topbar">
+    <h1>atom 검색</h1>
+    <span class="grow"></span>
+    <p class="summary" id="auth-message" role="alert" hidden></p>
+    <button class="btn small" id="retry-auth" type="button" hidden>다시 시도</button>
+    <a class="btn" id="login" href="https://atom.eiaserinnys.me/api/auth/google?return_to=atom-search-motion" hidden>Google로 로그인</a>
+    <a class="btn small" href="https://atom.eiaserinnys.me" target="_blank" rel="noopener noreferrer">atom</a>
+  </header>
 
-    <form class="search-form" id="search-form">
-      <input
-        class="search-input"
-        id="search-input"
-        type="search"
-        name="q"
-        autocomplete="off"
-        enterkeyhint="search"
-        aria-label="atom 검색어"
-        placeholder="검색어"
-        disabled
-      >
-      <button class="apple-button" id="search-button" type="submit" disabled>검색</button>
-    </form>
+  <form class="search" id="search-form">
+    <input id="q" type="search" disabled aria-label="검색어" autocomplete="off" enterkeyhint="search">
+    <button class="btn primary" id="go" type="submit" disabled>검색</button>
+  </form>
 
-    <div class="search-feedback">
-      <p class="apple-muted" id="live-status" role="status" aria-live="polite" aria-atomic="true"></p>
-      <div class="search-actions">
-        <button class="apple-button apple-button--secondary" id="cancel-search" type="button" hidden>취소</button>
-        <button class="apple-button apple-button--secondary" id="show-all" type="button" hidden>모두 보기</button>
-        <button class="apple-button apple-button--secondary" id="retry-search" type="button" hidden>다시 시도</button>
+  <div class="outcome">
+    <ol class="tray" id="tray" aria-label="선정한 카드"></ol>
+    <button class="btn small more" id="more" type="button" hidden>더 찾아보기</button>
+    <p class="summary" id="summary"><span id="sum-time"></span><span class="jev" id="sum-jev"></span></p>
+  </div>
+
+  <section class="board" aria-label="검색 그래프">
+    <div class="toolbar" role="toolbar" aria-label="재생">
+      <button class="tool" id="t-first" type="button" aria-label="처음으로" title="처음으로"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h2v10H3zM13 3v10L6 8z"/></svg></button>
+      <button class="tool" id="t-prev" type="button" aria-label="이전 단계" title="이전 단계"><svg class="line" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
+      <button class="tool play" id="t-play" type="button" aria-label="재생" title="재생"><svg viewBox="0 0 16 16" aria-hidden="true"><path id="play-icon" d="M5 3l8 5-8 5z"/></svg></button>
+      <button class="tool" id="t-next" type="button" aria-label="다음 단계" title="다음 단계"><svg class="line" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
+      <button class="tool" id="t-last" type="button" aria-label="끝으로" title="끝으로"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l7 5-7 5zM11 3h2v10h-2z"/></svg></button>
+      <span class="count" id="count" aria-label="단계">0</span>
+      <span class="narr" id="narr"></span>
+      <span class="break" aria-hidden="true"></span>
+      <div class="scrub"><input type="range" id="scrub" min="0" max="0" step="1" value="0" aria-label="단계 이동"></div>
+      <button class="btn small skip off" id="t-skip" type="button" disabled>건너뛰기</button>
+      <div class="right">
+        <button class="btn small toggle" id="t-low" type="button" aria-pressed="true">낮은 후보</button>
+        <span class="zoomgroup right">
+          <button class="tool" id="t-zout" type="button" aria-label="축소" title="축소"><svg class="line" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg></button>
+          <output class="zoom" id="zoom" aria-label="배율">100%</output>
+          <button class="tool" id="t-zin" type="button" aria-label="확대" title="확대"><svg class="line" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M8 3v10"/></svg></button>
+        </span>
+        <button class="btn small" id="t-fit" type="button">전체</button>
       </div>
     </div>
-
-    <section class="workbench" id="workbench" aria-label="검색 결과와 원문" hidden>
-      <div class="apple-diagram" id="diagram">
-        <div class="network" id="network">
-          <svg class="connections" id="connections" aria-hidden="true" focusable="false"></svg>
-          <div class="query-node" id="query-node" hidden>
-            <p class="query-label">검색어</p>
-            <div class="query-value" id="query-value"></div>
-            <div class="query-state" id="query-state" aria-hidden="true" hidden>
-              <span class="loading-mark" aria-hidden="true"></span>
-            </div>
-          </div>
-          <ol class="result-list" id="result-list" aria-label="실제 검색 결과"></ol>
+    <div class="stage">
+    <div class="plot" id="plot" tabindex="0" role="group" aria-roledescription="검색 그래프" aria-label="검색 그래프" aria-describedby="graph-help">
+      <canvas id="cv" aria-hidden="true"></canvas>
+      <ul class="legend" aria-label="범례">
+        <li><i class="sw s"></i>구조</li>
+        <li><i class="sw k"></i>지식</li>
+        <li><i class="ln"></i>열림</li>
+        <li><i class="ln c"></i>닫힘</li>
+        <li><i class="ln p"></i>선정</li>
+      </ul>
+      <button class="btn small follow" id="t-follow" type="button" hidden>따라가기</button>
+      <div class="pop" id="pop" role="tooltip" hidden></div>
+      <p class="sr-only" id="graph-help">화살표 키로 후보를 옮기고 Enter로 연다. 더하기와 빼기로 확대와 축소, 0으로 전체 보기.</p>
+      <p class="sr-only" id="graph-live" aria-live="polite"></p>
+    </div>
+      <aside class="sheet" id="sheet" aria-label="카드" hidden>
+        <div class="sheet-head">
+          <div><h2 id="sheet-title" tabindex="-1"></h2><p class="sheet-path" id="sheet-path"></p></div>
+          <button class="tool" id="sheet-close" type="button" aria-label="닫기" title="닫기"><svg class="line" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
         </div>
-      </div>
+        <div class="sheet-body" id="sheet-body"></div>
+      </aside>
+    </div>
+  </section>
+  <p class="sr-only" id="status" role="status" aria-live="polite"></p>
+</div>
 
-      <aside class="original-panel" id="original-panel" aria-label="선택한 카드 원문"></aside>
-    </section>
-  </main>
 
-  <script>
-    (() => {
-      const API_BASE_URL = "https://atom.eiaserinnys.me";
-      const RETURN_SELECTOR = "atom-search-motion";
-      const root = document.documentElement;
-      const form = document.getElementById("search-form");
-      const input = document.getElementById("search-input");
-      const searchButton = document.getElementById("search-button");
-      const liveStatus = document.getElementById("live-status");
-      const authMessage = document.getElementById("auth-message");
-      const loginLink = document.getElementById("login-link");
-      const retryAuthButton = document.getElementById("retry-auth");
-      const cancelButton = document.getElementById("cancel-search");
-      const showAllButton = document.getElementById("show-all");
-      const retrySearchButton = document.getElementById("retry-search");
-      const workbench = document.getElementById("workbench");
-      const network = document.getElementById("network");
-      const connections = document.getElementById("connections");
-      const queryNode = document.getElementById("query-node");
-      const queryValue = document.getElementById("query-value");
-      const queryState = document.getElementById("query-state");
-      const resultList = document.getElementById("result-list");
-      const originalPanel = document.getElementById("original-panel");
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      const mobileLayout = window.matchMedia("(max-width: 56rem)");
 
-      loginLink.href = API_BASE_URL + "/api/auth/google?return_to=" + encodeURIComponent(RETURN_SELECTOR);
+<script>
+(() => {
+  "use strict";
+  // =====================================================================
+  // 승인된 시안의 재생기. 실제 Jev 스트림 사건만 메모리에서 재생한다.
+  // =====================================================================
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const easeOut = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+  const mqReduce = matchMedia("(prefers-reduced-motion: reduce)");
+  const reduced = () => mqReduce.matches;
+  const ROOT = "__root__";
+  let dpr = 1; let W = 0; let H = 0;
+  const JEV = new Set(["structure_noul", "content_noul", "sufficiency_noul"]);
 
-      let authenticated = false;
-      let googleAvailable = false;
-      let composing = false;
-      let activeSearch = null;
-      let activeCardRequest = null;
-      let searchVersion = 0;
-      let cardVersion = 0;
-      let lastQuery = "";
-      let selectedButton = null;
-      let selectedResult = null;
-      let motionEntries = [];
-      let motionFrame = 0;
-      let edgeLayout = [];
-      let queryEdge = null;
-
-      function setLiveStatus(message, kind) {
-        liveStatus.textContent = message;
-        liveStatus.dataset.kind = kind || "normal";
-        liveStatus.classList.toggle("visually-hidden", message === "검색 결과가 펼쳐졌습니다.");
+  // ------------------------------------------------------------------ 1. 사건을 모델로
+  function createModel() {
+    return { run: null, policy: null, hit: 0.5, nodes: new Map(), order: [], inflight: new Map(), calls: new Map(), steps: 0, suff: new Map(), asking: null, widen: null, terminal: null, done: null, maxHop: 0, last: null, selThreshold: null };
+  }
+  function mkNode(o) {
+    return Object.assign({ ref: "", nodeId: null, type: "knowledge", title: "", path: [], summary: null, hop: 0, origin: "outline", parent: null, climbFrom: [], score: null, verdict: "pending", byHit: false, selected: false, rank: 0, judging: null, reading: 0, climbing: false, asked: null, snippet: null, again: [], order: 0, childCount: null, physicalParent: null, cardId: null, deferred: false }, o);
+  }
+  // 사건 하나를 모델에 반영하고, 연출에 쓸 변화 목록을 돌려준다
+  function applyEvent(m, ev) {
+    const d = ev.data;
+    const delta = { event: ev.event, stage: null, hop: 0, added: [], scored: [], opened: [], again: [], selected: [], suff: null };
+    if (ev.event === "run") { m.run = d; m.policy = d.policy || {}; m.hit = m.policy.structure_threshold ?? 0.5; return delta; }
+    if (ev.event === "step_started") {
+      delta.stage = d.stage; delta.hop = d.hop;
+      m.inflight.set(d.id, { id: d.id, seq: d.seq, stage: d.stage, hop: d.hop, refs: d.candidate_refs });
+      if (d.stage === "structure_noul" || d.stage === "content_noul") for (const r of d.candidate_refs) { const n = m.nodes.get(r); if (n) n.judging = d.id; }
+      else if (d.stage === "atom_outline") { const n = m.nodes.get(d.candidate_refs[0] ?? ROOT); if (n) n.reading += 1; }
+      else if (d.stage === "hit_parent") for (const r of d.candidate_refs) { const n = m.nodes.get(r); if (n) n.climbing = true; }
+      else if (d.stage === "sufficiency_noul") m.asking = { step: d.id, hop: d.hop, refs: d.candidate_refs };
+      else if (d.stage === "deferred_scan") { const n = m.nodes.get(d.candidate_refs[0]); if (n) n.reading += 1; }
+      m.last = { stage: d.stage, hop: d.hop };
+      return delta;
+    }
+    if (ev.event === "step_completed") {
+      const s = d.step; delta.stage = s.stage; delta.hop = s.hop;
+      m.inflight.delete(s.id); m.steps += 1;
+      if (s.stage !== "selection" && s.stage !== "run_terminal") m.maxHop = Math.max(m.maxHop, s.hop);
+      if (d.call) m.calls.set(s.id, d.call);
+      if (s.stage === "atom_outline") { const n = m.nodes.get(s.parent_ref ?? ROOT); if (n) n.reading = Math.max(0, n.reading - 1); }
+      if (s.stage === "widen") {
+        m.widen = { hop: s.hop, reason: s.widen_reason };
+        if (!m.nodes.has(ROOT)) { m.nodes.set(ROOT, mkNode({ ref: ROOT, type: "root", title: "루트", hop: Math.max(0, s.hop - 1), verdict: "open", origin: "root" })); delta.added.push(ROOT); }
       }
-
-      function setAuthMessage(message) {
-        authMessage.textContent = message || "";
-        authMessage.hidden = !message;
+      const alias = new Set();
+      for (const dec of s.decisions) if (dec.action === "alias") alias.add(dec.ref);
+      if (s.stage === "deferred_scan") {
+        const parentRef = s.parent_ref; const parent = m.nodes.get(parentRef);
+        if (parent) { parent.reading = Math.max(0, parent.reading - 1); parent.deferred = false; }
+        delta.scan = parentRef;
       }
-
-      function showLogin() {
-        loginLink.hidden = authenticated || !googleAvailable;
+      const hits = s.stage === "hit_parent" ? s.candidate_refs.filter((r) => m.nodes.has(r)) : [];
+      for (const r of hits) m.nodes.get(r).climbing = false;
+      for (const c of d.candidates) {
+        if (alias.has(c.ref)) continue;
+        const parent = c.origin === "outline" ? (c.traversal_parent_ref ?? (m.nodes.has(ROOT) ? ROOT : null)) : c.origin === "hit_parent" ? (c.hit_ref ?? hits[0] ?? null) : null;
+        const n = mkNode({ ref: c.ref, nodeId: c.node_id, type: c.card_type, title: c.title, path: c.path, summary: c.summary, hop: c.hop, origin: c.origin, parent, climbFrom: c.origin === "hit_parent" ? (hits.length ? hits : [c.hit_ref].filter(Boolean)) : [], snippet: c.match_snippet ?? null, order: m.order.length, childCount: c.child_count, physicalParent: c.physical_parent_node_id, cardId: c.card_id });
+        m.nodes.set(n.ref, n); m.order.push(n.ref); m.maxHop = Math.max(m.maxHop, n.hop); delta.added.push(n.ref);
       }
-
-      function updateSearchAvailability() {
-        input.disabled = !authenticated;
-        searchButton.disabled = !authenticated;
-        showLogin();
+      for (const dec of s.decisions) {
+        if (dec.action === "alias") { const first = m.nodes.get(dec.reused_from_ref); if (first) { first.again.push(s.hop); delta.again.push(first.ref); } continue; }
+        const n = m.nodes.get(dec.ref); if (!n) continue;
+        if (dec.action === "no_body") n.verdict = "nobody";
+        else if (dec.action === "opened_by_hit" || dec.action === "opened_root") { n.score = null; n.verdict = "open"; n.byHit = dec.action === "opened_by_hit"; n.byRoot = dec.action === "opened_root"; delta.opened.push(n.ref); }
+        else if (dec.action === "queued" || dec.action === "pruned" || dec.action === "content_scored") {
+          n.score = dec.score; n.judging = null; n.asked = { step: s.id, key: dec.question_key };
+          n.verdict = dec.action === "queued" ? "open" : dec.action === "pruned" ? "closed" : dec.score >= m.hit ? "hit" : "low";
+          delta.scored.push(n.ref); if (n.verdict === "open") delta.opened.push(n.ref);
+        }
       }
-
-      function errorStatus(status) {
-        const error = new Error("request-failed");
-        error.status = status;
-        return error;
+      for (const ref of s.deferred_refs || []) { const n = m.nodes.get(ref); if (n) n.deferred = true; }
+      for (const n of m.nodes.values()) if (n.byHit) {
+        n.climbFrom = [...m.nodes.values()].filter((hit) => hit.type === "knowledge" && hit.score >= m.hit && hit.physicalParent === n.nodeId).map((hit) => hit.ref);
       }
-
-      async function getJson(path, signal) {
-        const response = await fetch(API_BASE_URL + path, {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-          signal: signal,
-        });
-        if (!response.ok) throw errorStatus(response.status);
-        return response.json();
+      if (s.stage === "sufficiency_noul") {
+        const threshold = s.sufficiency_threshold ?? m.policy.sufficiency_threshold ?? 0.7;
+        if (typeof s.sufficiency_score === "number") {
+          m.suff.set(s.hop, { score: s.sufficiency_score, threshold, ok: s.sufficiency_score >= threshold, refs: s.candidate_refs, step: s.id });
+          delta.suff = s.hop;
+        }
+        m.asking = null;
       }
+      if (s.stage === "selection") {
+        m.selThreshold = s.selection_threshold ?? null;
+        (s.selected_refs || []).forEach((r, i) => { const n = m.nodes.get(r); if (n) { n.selected = true; n.rank = i + 1; delta.selected.push(r); } });
+      }
+      if (s.stage === "run_terminal") m.terminal = { status: s.terminal_status, code: s.terminal_code ?? null, stop: s.stop_reason ?? null };
+      m.last = { stage: s.stage, hop: s.hop };
+      return delta;
+    }
+    if (ev.event === "done") {
+      m.done = d;
+      m.terminal = { status: d.status, code: d.error ? d.error.code : null, stop: d.stop_reason ?? null };
+      let any = false; for (const n of m.nodes.values()) if (n.selected) { any = true; break; }
+      if (!any) (d.results || []).forEach((r, i) => { for (const n of m.nodes.values()) if (n.nodeId === r.node_id) { n.selected = true; n.rank = i + 1; delta.selected.push(n.ref); } });
+    }
+    return delta;
+  }
+  // 완성 응답(stream 없이 받은 JSON)을 같은 사건 줄로 바꾼다. 순서는 끝난 시각, 같으면 seq
+  function eventsFromResponse(res) {
+    const byStep = new Map(); for (const c of res.trace.candidates) { if (!byStep.has(c.discovered_in_step_id)) byStep.set(c.discovered_in_step_id, []); byStep.get(c.discovered_in_step_id).push(c); }
+    const calls = new Map(res.trace.calls.map((c) => [c.call_id, c]));
+    const out = [{ at: Date.parse(res.started_at), k: 0, seq: 0, event: "run", data: res }];
+    for (const s of res.trace.steps) {
+      out.push({ at: Date.parse(s.started_at), k: 1, seq: s.seq, event: "step_started", data: { id: s.id, seq: s.seq, hop: s.hop, stage: s.stage, started_at: s.started_at, candidate_refs: s.candidate_refs } });
+      out.push({ at: Date.parse(s.completed_at ?? s.started_at), k: 2, seq: s.seq, event: "step_completed", data: { step: s, candidates: byStep.get(s.id) || [], call: calls.get(s.call_id) || null } });
+    }
+    out.sort((a, b) => a.at - b.at || a.seq - b.seq || a.k - b.k);
+    out.push({ event: "done", data: res });
+    return out.map(({ event, data }) => ({ event, data }));
+  }
+  const eventTime = (ev) => Date.parse(ev.event === "run" ? ev.data.started_at : ev.event === "step_started" ? ev.data.started_at : ev.event === "done" ? ev.data.completed_at : (ev.data.step.completed_at ?? ev.data.step.started_at));
+  const isAlive = (n) => n.type === "root" || n.verdict === "open" || n.verdict === "hit" || n.selected;
+  const isDim = (n) => !n.selected && (n.verdict === "closed" || n.verdict === "low" || n.verdict === "nobody");
+  function stopLabel(t) {
+    if (!t) return "";
+    if (t.stop === "sufficient") return "충분함";
+    if (t.stop === "exhausted") return "더 열 곳 없음";
+    return { CALL_BUDGET: "호출 상한", RUN_TIME_LIMIT: "시간 상한", CANDIDATE_LIMIT: "후보 상한", CANCELLED: "취소" }[t.code] || (t.status === "error" ? "오류" : "끝");
+  }
+  const hopName = (h) => (h === 0 ? "입구" : "홉 " + h);
+  function narrate(m) {
+    const l = m.last; if (!l) return "";
+    if (l.stage === "run_terminal") return stopLabel(m.terminal);
+    if (l.stage === "selection") return "선정";
+    const name = { lexical_seed: "낱말 씨앗", structure_noul: "문", content_noul: "채점", sufficiency_noul: "찾았나", hit_parent: "윗구조", atom_outline: "펼침", widen: "그물 넓히기", deferred_scan: "큰 모음 훑기" }[l.stage] || l.stage;
+    return hopName(l.hop) + " " + name;
+  }
 
+  // ------------------------------------------------------------------ 2. 자리 잡기
+  const M = { colW: 220, gap: 150, rowH: 30, pitch: 38, lowPitch: 35, chipH: 22, bandGap: 14, groupGap: 6, padX: 28, padTop: 14, headerH: 46, pileH: 28, pendCap: 14, cell: 5, laneY: -9 };
+  const ui = { showLow: true, expanded: new Set(), follow: true };
+  const colX = (hop) => hop * (M.colW + M.gap);
+  // 열은 홉. 한 열 안에서 위 띠는 살아 있는 것(열린 구조, 맞은 카드, 선정)과 아직 판정 전인 것,
+  // 아래 띠는 닫히거나 낮은 것. 넘치는 것은 부모별 더미(+N)로 접는다.
+  function layout(m) {
+    const pos = new Map(); const piles = new Map(); const hidden = new Map(); const cols = []; const dorm = new Map();
+    const byHop = new Map();
+    const push = (n) => { if (n.deferred) dorm.set(n.ref, n.childCount); if (!byHop.has(n.hop)) byHop.set(n.hop, []); byHop.get(n.hop).push(n); };
+    const root = m.nodes.get(ROOT); if (root) push(root);
+    for (const ref of m.order) push(m.nodes.get(ref));
+    let height = 0;
+    const lastHop = m.run ? Math.max(m.maxHop, 0) : -1;
+    const gridCols = Math.floor((M.colW - 16) / M.cell);
+    // 입구 하나뿐인 동안에는 씨앗을 여러 줄로 넓게 편다(가장 자주 보는 화면). 다음 홉이 나오면 한 열로 접힌다
+    const stride = M.colW + 16;
+    const K = lastHop <= 0 && !root && W > 0 ? clamp(Math.floor((W - 2 * M.padX + 16) / stride), 1, 3) : 1;
+    const byScore = (a, b) => (b.score ?? 2) - (a.score ?? 2) || a.order - b.order;
+    // 더미: 접어 둔 후보가 많으면 점 격자로 그린다. 점 하나가 카드 하나이고 자리는 발견 순서라 바뀌지 않는다
+    const placePile = (g, x, yy, hop, rest, foldable) => {
+      const segs = [...g.steps.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([id, done]) => ({ id, done }));
+      const grid = rest.length > 24;
+      const h = grid ? 26 + Math.ceil(g.all.length / gridCols) * M.cell + 5 : M.pileH;
+      const parents = g.merged ? [...new Set(rest.map((n) => n.parent).filter(Boolean))] : g.parent ? [g.parent] : [];
+      piles.set(g.key, { key: g.key, x, y: yy, h, grid, cells: grid ? g.all : null, cols: gridCols, count: rest.length, expanded: foldable && rest.length === 0, parents, hop, segs, busy: segs.some((sg) => !sg.done) });
+      for (const n of rest) hidden.set(n.ref, g.key);
+      return h;
+    };
+    for (let hop = 0; hop <= lastHop; hop += 1) {
+      const x = colX(hop);
+      const nodes = byHop.get(hop) || [];
+      const groups = new Map();
+      for (const n of nodes) {
+        const key = hop + "|" + (n.type === "root" ? "@root" : n.parent ?? "@seed");
+        if (!groups.has(key)) {
+          const anchor = n.parent && (pos.get(n.parent) || piles.get(hidden.get(n.parent)));
+          groups.set(key, { key, parent: n.type === "root" ? null : n.parent, anchorY: n.type === "root" ? -2 : anchor ? anchor.y : -1, alive: [], pend: [], low: [], nobody: [], steps: new Map(), all: [] });
+        }
+        const g = groups.get(key); g.all.push(n.ref);
+        if (isAlive(n)) g.alive.push(n); else if (n.verdict === "pending") g.pend.push(n); else if (n.verdict === "nobody") g.nobody.push(n); else g.low.push(n);
+        if (n.judging) g.steps.set(n.judging, false);
+        if (n.asked) g.steps.set(n.asked.step, true);
+      }
+      let list = [...groups.values()].sort((a, b) => a.anchorY - b.anchorY);
+      let y = 0;
+      if (hop === 0 && K > 1) {
+        const g = list[0] || { key: "0|@seed", parent: null, alive: [], pend: [], low: [], nobody: [], steps: new Map(), all: [] };
+        g.alive.sort(byScore); g.low.sort(byScore);
+        const rows = (arr, pitch) => { for (let i = 0; i < arr.length; i += K) { const row = arr.slice(i, i + K); row.forEach((n, k) => pos.set(n.ref, { x: x + k * stride, y })); y += pitch + (row.some((n) => n.selected) ? M.chipH + 2 : 0); } };
+        rows(g.alive, M.pitch); rows(g.pend, M.pitch);
+        const lows = g.low.concat(g.nobody);
+        if (lows.length) { if (y > 0) y += M.bandGap; if (ui.showLow) rows(lows, M.lowPitch); else y += placePile(g, x, y, 0, lows, false) + 6; }
+        cols.push({ hop, x, height: y, w: K * stride - 16 }); height = Math.max(height, y);
+        continue;
+      }
+      for (const g of list) {
+        g.alive.sort(byScore);
+        // 구조가 미뤄 둔 묶음이 있으면 그 아래에 칩 한 줄을 둔다
+        for (const n of g.alive) { pos.set(n.ref, { x, y }); y += M.pitch + (n.selected || dorm.has(n.ref) ? M.chipH + 2 : 0); }
+      }
+      // 부모가 많은 열(루트 아래 등)은 판정 전인 줄과 접는 묶음을 열 하나로 합친다
+      if (list.length > 4) {
+        const all = { key: hop + "|@all", merged: true, parent: null, alive: [], pend: [], low: [], nobody: [], steps: new Map(), all: nodes.filter((n) => n.type !== "root").map((n) => n.ref) };
+        for (const g of list) { all.pend.push(...g.pend); all.low.push(...g.low); all.nobody.push(...g.nobody); for (const [id, done] of g.steps) all.steps.set(id, done); }
+        all.pend.sort((a, b) => a.order - b.order);
+        list = [all];
+      }
+      const big = list.filter((g) => g.all.length > 1).length;
+      const lowCap = list.filter((g) => g.low.length + g.nobody.length > 0).length <= 1 ? 8 : 4;
+      const pendCap = big <= 1 ? M.pendCap : Math.max(2, Math.floor(12 / big));
+      for (const g of list) {
+        const open = ui.expanded.has(g.key);
+        const head = new Set(g.all.slice(0, g.all.length > 96 ? 6 : g.merged ? 12 : pendCap));
+        g.low.sort(byScore);
+        g.lowAll = g.low.concat(g.nobody);
+        g.lowVis = open ? g.lowAll : ui.showLow ? g.lowAll.slice(0, lowCap) : [];
+        // 판정 전인 줄은 먼저 발견된 몇 장만 보이고 자리를 지킨다. 더미에서 기다리는 카드를 판정 전에 꺼내 보이지 않는다
+        g.pendVis = open ? g.pend : g.pend.filter((n) => head.has(n.ref));
+        if (g.pend.length - g.pendVis.length === 1 && g.lowAll.length === g.lowVis.length) g.pendVis = g.pend;
+        for (const n of g.pendVis) { pos.set(n.ref, { x, y }); y += M.pitch; }
+        // 아직 묻지 않은 카드가 더미에 남아 있으면 더미를 판정 중인 줄 바로 아래에 둔다
+        if (g.pend.length > g.pendVis.length) { g.piled = true; const shown = new Set(g.pendVis); y += placePile(g, x, y, hop, g.pend.filter((n) => !shown.has(n)).concat(g.lowAll.slice(g.lowVis.length)), false) + 10; }
+      }
+      let lower = false;
+      for (const g of list) {
+        const open = ui.expanded.has(g.key);
+        let vis = g.lowVis;
+        let rest = g.piled ? [] : g.lowAll.slice(vis.length);
+        if (!open && ui.showLow && rest.length === 1) { vis = g.lowAll; rest = []; }
+        if (vis.length + rest.length === 0 && !open) continue;
+        if (!lower && y > 0) y += M.bandGap; lower = true;
+        for (const n of vis) { pos.set(n.ref, { x, y }); y += M.lowPitch; }
+        const foldable = open && !g.piled && g.lowAll.length + g.pend.length > lowCap;
+        if (rest.length > 0 || foldable) y += placePile(g, x, y, hop, rest, foldable) + 6;
+        y += M.groupGap;
+      }
+      cols.push({ hop, x, height: y, w: M.colW });
+      height = Math.max(height, y);
+    }
+    const wide = K > 1 && lastHop <= 0;
+    const last = cols[cols.length - 1];
+    return { cols, pos, piles, hidden, dorm, wide, width: wide ? K * stride - 16 : last ? last.x + last.w : 0, height };
+  }
+
+  // ------------------------------------------------------------------ 3. 보이는 상태 (스프링, 효과)
+  let model = createModel();
+  const view = { nodes: new Map(), edges: new Map(), piles: new Map(), gauges: new Map(), fx: [], L: layout(model), stop: 0, ask: 0, askInfo: null, march: 0, hover: null, focus: null, hoverKeys: new Set() };
+  const cam = { x: -M.padX, y: -M.padTop, z: 1, tx: -M.padX, ty: -M.padTop, tz: 1, vx: 0, vy: 0, vz: 0, mode: "idle" };
+
+  function spawnOrigin(n, tg) {
+    if (n.type === "root") return { x: tg.x, y: tg.y - 16 };
+    if (n.origin === "lexical_seed") return { x: tg.x - 46, y: tg.y - 6 };
+    const p = n.parent && view.nodes.get(n.parent);
+    if (p) return { x: tg.x - 28, y: lerp(p.y, tg.y, 0.85) };
+    return { x: tg.x - 28, y: tg.y };
+  }
+  function spawnDelay(n, i) {
+    if (n.type === "root") return 220;
+    if (n.origin === "lexical_seed") return 40 + Math.min(340, i * 22);
+    if (n.origin === "hit_parent") return 260;
+    return 170 + Math.min(260, i * 14);
+  }
+  function targetOf(n, L) {
+    const key = L.hidden.get(n.ref);
+    const p = key ? L.piles.get(key) : L.pos.get(n.ref);
+    return { x: p.x, y: p.y, a: key ? 0 : 1, alive: isAlive(n) ? 1 : 0, dim: isDim(n) ? 1 : 0, sel: n.selected ? 1 : 0, judge: n.judging ? 1 : 0, score: n.score != null ? 1 : 0, port: n.type !== "structure" ? 0 : n.verdict === "open" ? 1 : n.verdict === "pending" ? 0.45 : 0, read: n.reading > 0 || n.climbing ? 1 : 0, soft: n.byRoot ? 1 : 0 };
+  }
+  function snapNode(v) { const t = v.next || v.t; v.t = t; v.next = null; v.x = t.x; v.y = t.y; v.vx = v.vy = 0; v.a = t.a; v.alive = t.alive; v.dim = t.dim; v.sel = t.sel; v.judge = t.judge; v.scoreA = t.score; v.port = t.port; v.read = t.read; v.wipe = 1; v.born = 0; v.selAt = 0; }
+
+  // 모델이 바뀔 때마다 부른다. animate가 거짓이면 그 자리로 바로 옮긴다(되감기, 건너뛰기, 모션 줄임)
+  function sync(now, animate, delta) {
+    if (reduced()) animate = false;
+    const L = layout(model); view.L = L;
+    const addedAt = new Map(); const scoredAt = new Map();
+    if (delta) { delta.added.forEach((r, i) => addedAt.set(r, i)); delta.scored.forEach((r, i) => scoredAt.set(r, i)); }
+    for (const n of model.nodes.values()) {
+      const tg = targetOf(n, L);
+      let v = view.nodes.get(n.ref);
+      if (!v) {
+        const o = animate ? spawnOrigin(n, tg) : tg;
+        v = { ref: n.ref, x: o.x, y: o.y, vx: 0, vy: 0, a: 0, alive: 0, dim: 0, sel: 0, judge: 0, scoreA: 0, port: 0, read: 0, wipe: 1, flash: 0, born: now + (animate ? spawnDelay(n, addedAt.get(n.ref) || 0) : 0), t: tg, next: null, hold: 0, selAt: 0, fit: null };
+        view.nodes.set(n.ref, v);
+      } else if (animate && scoredAt.has(n.ref)) { v.next = tg; v.hold = now + Math.min(240, scoredAt.get(n.ref) * 12); }
+      else if (v.next) v.next = tg;
+      else v.t = tg;
+      if (!animate) { v.t = tg; v.next = null; snapNode(v); }
+    }
+    for (const ref of [...view.nodes.keys()]) { const n = model.nodes.get(ref); if (!n) view.nodes.delete(ref); }
+    // 더미
+    for (const [key, p] of L.piles) {
+      let pv = view.piles.get(key);
+      if (!pv) { pv = { key, x: p.x, y: p.y, a: 0, n: animate ? 0 : p.count, born: now + (animate ? 320 : 0) }; view.piles.set(key, pv); }
+      pv.info = p; pv.tx = p.x; pv.ty = p.y;
+      if (!animate) { pv.x = p.x; pv.y = p.y; pv.a = 1; pv.n = p.count; pv.born = 0; pv.ring = p.busy ? 1 : 0; }
+    }
+    for (const key of [...view.piles.keys()]) if (!L.piles.has(key)) view.piles.delete(key);
+    // 선: 부모에서 자식으로, 맞은 카드에서 윗구조로, 부모에서 더미로
+    const want = new Set();
+    const edge = (key, from, to, kind, primary) => {
+      want.add(key);
+      let e = view.edges.get(key);
+      if (!e) {
+        const child = view.nodes.get(to) || view.piles.get(to.slice(1));
+        e = { key, from, to, kind, primary, grow: animate ? 0 : 1, born: animate && child ? Math.max(now, child.born - 230) : 0, sel: 0, tSel: 0, selAt: 0 };
+        view.edges.set(key, e);
+        if (animate && kind !== "bundle" && view.fx.length < 60) view.fx.push({ type: "spark", key, at: e.born, dur: 300 });
+      }
+      return e;
+    };
+    const hopOf = (ref) => { const n = model.nodes.get(ref); return n ? n.hop : 0; };
+    for (const n of model.nodes.values()) {
+      if (n.climbFrom.length) n.climbFrom.forEach((h, i) => edge(h + ">" + n.ref, h, n.ref, "climb", i === 0));
+      else if (n.parent) edge(n.parent + ">" + n.ref, n.parent, n.ref, "child", false).lane = n.hop - hopOf(n.parent) > 1;
+    }
+    for (const [key, p] of L.piles) if (p.count > 0) for (const par of p.parents) edge(par + ">@" + key, par, "@" + key, "bundle", false).lane = p.hop - hopOf(par) > 1;
+    for (const key of [...view.edges.keys()]) if (!want.has(key)) view.edges.delete(key);
+    // 선정한 카드까지의 길
+    const path = new Map(); let longest = new Map();
+    const picked = [...model.nodes.values()].filter((n) => n.selected).sort((a, b) => a.rank - b.rank);
+    for (const n of picked) {
+      const chain = []; let cur = n; let guard = 0;
+      while (cur && guard < 24) { guard += 1; const up = cur.origin === "hit_parent" ? cur.climbFrom[0] : cur.parent; if (!up) break; chain.push(up + ">" + cur.ref); cur = model.nodes.get(up); }
+      chain.reverse().forEach((k, i) => { if (!path.has(k)) path.set(k, { rank: n.rank, i }); });
+      longest.set(n.ref, chain.length);
+    }
+    for (const e of view.edges.values()) {
+      const s = path.get(e.key);
+      if (s && !e.tSel) e.selAt = animate ? now + 140 + (s.rank - 1) * 120 + s.i * 180 : 0;
+      e.tSel = s ? 1 : 0; if (!animate) e.sel = e.tSel;
+    }
+    for (const n of picked) { const v = view.nodes.get(n.ref); if (v && v.sel < 0.01 && animate && !v.selAt) v.selAt = now + 140 + (n.rank - 1) * 120 + (longest.get(n.ref) || 0) * 180; }
+    // 충분성 눈금
+    for (const c of L.cols) {
+      let g = view.gauges.get(c.hop); if (!g) { g = { v: 0, a: 0, ok: 0 }; view.gauges.set(c.hop, g); }
+      const s = model.suff.get(c.hop); const asking = model.asking && model.asking.hop === c.hop;
+      g.tv = s ? s.score : 0; g.ta = s || asking ? 1 : 0; g.tok = s && s.ok ? 1 : 0; g.spin = !!asking; g.th = s ? s.threshold : (model.policy && model.policy.sufficiency_threshold) || 0.7; g.score = s ? s.score : null;
+      if (!animate) { g.v = g.tv; g.a = g.ta; g.ok = g.tok; }
+    }
+    for (const hop of [...view.gauges.keys()]) if (!L.cols.some((c) => c.hop === hop)) view.gauges.delete(hop);
+    view.askInfo = model.asking || view.askInfo;
+    if (!animate) { view.stop = model.terminal ? 1 : 0; view.ask = model.asking ? 1 : 0; view.fx.length = 0; view.march = 0; }
+    // 사건에 붙는 한 번짜리 효과
+    if (animate && delta) {
+      delta.opened.forEach((r, i) => view.fx.push({ type: "ring", ref: r, port: true, at: now + Math.min(240, (scoredAt.get(r) || 0) * 12) + 60, dur: 520, color: "path" }));
+      delta.again.forEach((r) => { const v = view.nodes.get(r); if (v) v.flash = 1; });
+      if (delta.scan) { for (let i = 0; i < 2; i += 1) view.fx.push({ type: "ring", ref: delta.scan, port: true, at: now + i * 160, dur: 620, color: "jev" }); const v = view.nodes.get(delta.scan); if (v) v.flash = 1; }
+      if (delta.stage === "widen" && delta.event === "step_completed") {
+        view.fx.push({ type: "wave", at: now, dur: 760 });
+        for (let i = 0; i < 3; i += 1) view.fx.push({ type: "ring", ref: ROOT, at: now + 220 + i * 150, dur: 760, color: "path", big: true });
+      }
+      if (delta.suff != null) view.fx.push({ type: "gauge", hop: delta.suff, at: now + 380, dur: 560, ok: model.suff.get(delta.suff).ok });
+      delta.selected.forEach((r) => { const v = view.nodes.get(r); view.fx.push({ type: "ring", ref: r, at: (v && v.selAt) || now, dur: 620, color: "evidence", box: true }); });
+      if (delta.selected.length) view.march = now + 2600;
+      if (delta.stage === "run_terminal") view.fx.push({ type: "stamp", at: now, dur: 360 });
+    }
+    updateHoverKeys();
+    invalidate();
+  }
+
+  const spring = (cur, vel, target, dt, response) => { const w = (2 * Math.PI) / response; const a = -w * w * (cur - target) - 2 * w * vel; const v = vel + a * dt; return [cur + v * dt, v]; };
+  const approach = (cur, target, dt, tau) => cur + (target - cur) * (1 - Math.exp(-dt / tau));
+  function tick(now, dt) {
+    let active = false;
+    const live = playing();
+    for (const v of view.nodes.values()) {
+      if (v.next && now >= v.hold) { if (v.next.alive > v.t.alive) v.wipe = 0; v.t = v.next; v.next = null; }
+      if (v.next) active = true;
+      if (now < v.born) { active = true; continue; }
+      const t = v.t;
+      for (let i = 0; i < 2; i += 1) { [v.x, v.vx] = spring(v.x, v.vx, t.x, dt / 2, 0.38); [v.y, v.vy] = spring(v.y, v.vy, t.y, dt / 2, 0.42); }
+      v.a = approach(v.a, t.a, dt, 0.08); v.alive = approach(v.alive, t.alive, dt, 0.11); v.dim = approach(v.dim, t.dim, dt, 0.13);
+      v.judge = approach(v.judge, t.judge, dt, 0.07); v.scoreA = approach(v.scoreA, t.score, dt, 0.07); v.port = approach(v.port, t.port, dt, 0.09); v.read = approach(v.read, t.read, dt, 0.09);
+      v.sel = approach(v.sel, t.sel && now >= v.selAt ? 1 : 0, dt, 0.1);
+      if (v.wipe < 1) v.wipe = Math.min(1, v.wipe + dt / 0.3);
+      if (v.flash > 0) v.flash = Math.max(0, v.flash - dt / 0.7);
+      if (Math.abs(v.x - t.x) > 0.3 || Math.abs(v.y - t.y) > 0.3 || Math.abs(v.vy) > 2 || Math.abs(v.a - t.a) > 0.01 || Math.abs(v.alive - t.alive) > 0.01 || Math.abs(v.dim - t.dim) > 0.01 || Math.abs(v.sel - t.sel) > 0.01 || Math.abs(v.judge - t.judge) > 0.01 || Math.abs(v.scoreA - t.score) > 0.01 || Math.abs(v.port - t.port) > 0.01 || Math.abs(v.read - t.read) > 0.01 || v.wipe < 1 || v.flash > 0) active = true;
+      if (live && (t.judge || t.read)) active = true;
+    }
+    for (const p of view.piles.values()) {
+      if (now < p.born) { active = true; continue; }
+      p.x = approach(p.x, p.tx, dt, 0.09); p.y = approach(p.y, p.ty, dt, 0.09); p.a = approach(p.a, 1, dt, 0.09); p.n = approach(p.n, p.info.count, dt, 0.1);
+      p.ring = approach(p.ring || 0, p.info.busy ? 1 : 0, dt, p.info.busy ? 0.08 : 0.3); if (Math.abs(p.ring - (p.info.busy ? 1 : 0)) > 0.02) active = true;
+      if (Math.abs(p.y - p.ty) > 0.3 || p.a < 0.99 || Math.abs(p.n - p.info.count) > 0.4) active = true; else p.n = p.info.count;
+      if (live && p.info.busy) active = true;
+    }
+    for (const e of view.edges.values()) {
+      if (now >= e.born && e.grow < 1) e.grow = Math.min(1, e.grow + dt / 0.26);
+      if (e.tSel && now >= e.selAt) e.sel = Math.min(1, e.sel + dt / 0.32); else if (!e.tSel) e.sel = Math.max(0, e.sel - dt / 0.2);
+      if (e.grow < 1 || e.sel !== e.tSel) active = true;
+    }
+    for (const g of view.gauges.values()) {
+      g.a = approach(g.a, g.ta, dt, 0.08); g.v = approach(g.v, g.tv, dt, 0.16); g.ok = approach(g.ok, g.tok, dt, 0.12);
+      if (Math.abs(g.a - g.ta) > 0.01 || Math.abs(g.v - g.tv) > 0.004 || Math.abs(g.ok - g.tok) > 0.01 || (live && g.spin)) active = true;
+    }
+    view.ask = approach(view.ask, model.asking ? 1 : 0, dt, model.asking ? 0.09 : 0.12);
+    view.stop = approach(view.stop, model.terminal ? 1 : 0, dt, 0.09);
+    if (Math.abs(view.ask - (model.asking ? 1 : 0)) > 0.01 || Math.abs(view.stop - (model.terminal ? 1 : 0)) > 0.01) active = true;
+    if (live && model.inflight.size > 0) active = true;
+    view.fx = view.fx.filter((f) => now < f.at + f.dur);
+    if (view.fx.length || now < view.march) active = true;
+    if (tickCamera(dt)) active = true;
+    return active;
+  }
+
+  // ------------------------------------------------------------------ 4. 카메라
+  const plot = $("plot"); const cv = $("cv"); const ctx = cv.getContext("2d");
+  function badgeRoom() { return model.terminal ? 150 : 0; }
+  function bounds(z = cam.z) {
+    const vw = W / z; const vh = (H - M.headerH) / z; const L = view.L;
+    // 입구만 있는 넓은 배치는 판 가운데에 둔다
+    const free = vw - L.width - badgeRoom();
+    const minX = L.wide && free > 2 * M.padX ? -free / 2 : -M.padX; const maxX = Math.max(minX, L.width + M.padX + badgeRoom() - vw);
+    const minY = -M.padTop; const maxY = Math.max(minY, L.height + 44 - vh);
+    return { minX, maxX, minY, maxY, vw, vh };
+  }
+  const rubber = (over, dim) => (over * dim * 0.55) / (dim + 0.55 * Math.abs(over));
+  function tickCamera(dt) {
+    if (cam.mode === "glide") {
+      cam.x += cam.vx * dt; cam.y += cam.vy * dt;
+      const k = Math.exp(-dt / 0.32); cam.vx *= k; cam.vy *= k;
+      const b = bounds();
+      if (cam.x < b.minX || cam.x > b.maxX || cam.y < b.minY || cam.y > b.maxY || Math.hypot(cam.vx, cam.vy) < 6) { cam.tx = clamp(cam.x, b.minX, b.maxX); cam.ty = clamp(cam.y, b.minY, b.maxY); cam.tz = cam.z; cam.mode = "spring"; }
+      return true;
+    }
+    if (cam.mode === "spring") {
+      if (reduced()) { cam.x = cam.tx; cam.y = cam.ty; cam.z = cam.tz; cam.vx = cam.vy = cam.vz = 0; cam.mode = "idle"; updateZoomLabel(); return false; }
+      for (let i = 0; i < 2; i += 1) { [cam.x, cam.vx] = spring(cam.x, cam.vx, cam.tx, dt / 2, 0.42); [cam.y, cam.vy] = spring(cam.y, cam.vy, cam.ty, dt / 2, 0.42); [cam.z, cam.vz] = spring(cam.z, cam.vz, cam.tz, dt / 2, 0.36); }
+      updateZoomLabel();
+      if (Math.abs(cam.x - cam.tx) < 0.3 && Math.abs(cam.y - cam.ty) < 0.3 && Math.abs(cam.z - cam.tz) < 0.002 && Math.hypot(cam.vx, cam.vy) < 4) { cam.x = cam.tx; cam.y = cam.ty; cam.z = cam.tz; cam.vx = cam.vy = cam.vz = 0; cam.mode = "idle"; return false; }
+      return true;
+    }
+    return false;
+  }
+  function moveCamera(x, y, z = cam.tz, instant = false) {
+    const b = bounds(z); cam.tx = clamp(x, b.minX, b.maxX); cam.ty = clamp(y, b.minY, b.maxY); cam.tz = z;
+    if (instant || reduced()) { cam.x = cam.tx; cam.y = cam.ty; cam.z = cam.tz; cam.vx = cam.vy = cam.vz = 0; cam.mode = "idle"; updateZoomLabel(); } else cam.mode = "spring";
+    invalidate();
+  }
+  function setFollow(on) { ui.follow = on; $("t-follow").hidden = on || !playing(); }
+  // 지금 진행 중인 홉과 그 앞 열이 보이게 한다. 배율은 건드리지 않는다
+  function followHop(hop, instant) {
+    if (!ui.follow) return;
+    const vw = W / cam.tz; const sheetW = sheetInset() / cam.tz;
+    const left = colX(Math.max(0, hop - 1)) - M.padX; const right = colX(hop) + M.colW + M.padX + badgeRoom() + sheetW;
+    let x = cam.tx;
+    if (right - left > vw) x = Math.min(right - vw, colX(hop) - 16); else if (right > x + vw) x = right - vw; else if (left < x) x = left;
+    moveCamera(x, -M.padTop, cam.tz, instant);
+  }
+  function showRefs(refs, instant) {
+    const hops = refs.map((r) => model.nodes.get(r)).filter(Boolean).map((n) => n.hop);
+    if (!hops.length) return followHop(model.maxHop, instant);
+    const vw = W / cam.tz; const left = colX(Math.min(...hops)) - M.padX; const right = colX(Math.max(...hops)) + M.colW + M.padX + badgeRoom() + sheetInset() / cam.tz;
+    moveCamera(right - left > vw ? Math.min(right - vw, colX(Math.max(...hops)) - 16) : clamp(cam.tx, right - vw, left), -M.padTop, cam.tz, instant);
+  }
+  function zoomTo(z, px = W / 2, py = H / 2) {
+    z = clamp(z, minZoom(), 1.6);
+    const wx = px / cam.z + cam.x; const wy = (py - M.headerH) / cam.z + cam.y;
+    setFollow(false);
+    moveCamera(wx - px / z, wy - (py - M.headerH) / z, z);
+  }
+  function fitZoom() {
+    const L = view.L; const w = L.width + 2 * M.padX + badgeRoom(); const h = L.height + M.padTop + 44;
+    return Math.min(W / w, (H - M.headerH) / h, 1);
+  }
+  const minZoom = () => Math.min(0.4, fitZoom());
+  function fitAll() {
+    const w = view.L.width + 2 * M.padX + badgeRoom(); const z = fitZoom();
+    setFollow(false);
+    moveCamera(-M.padX - Math.max(0, (W / z - w) / 2), -M.padTop, z);
+  }
+  function updateZoomLabel() { $("zoom").textContent = Math.round(cam.z * 100) + "%"; }
+
+  // ------------------------------------------------------------------ 5. 그리기 (캔버스 하나. 후보가 수백이어도 보이는 것만 그린다)
+  let T = null;
+  const hex = (s) => { s = s.trim(); if (s.startsWith("#")) { if (s.length === 4) s = "#" + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]; return [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)]; } const m = s.match(/[\d.]+/g) || [0, 0, 0]; return [Number(m[0]), Number(m[1]), Number(m[2])]; };
+  const css = (c, a = 1) => (a >= 1 ? `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})` : `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`);
+  const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  function readTokens() {
+    const cs = getComputedStyle(document.documentElement); const g = (n) => hex(cs.getPropertyValue(n));
+    T = { plot: g("--g-plot"), node: g("--g-node"), nodeLine: g("--g-node-line"), know: g("--g-know"), knowFill: g("--g-know-fill"), struct: g("--g-struct"), structFill: g("--g-struct-fill"), path: g("--g-path"), thin: g("--g-thin"), lowText: g("--g-low-text"), lowLine: g("--g-low-line"), jev: g("--g-jev"), ok: g("--g-ok"), evidence: g("--g-evidence"), evidenceInk: g("--g-evidence-ink"), ink: g("--g-ink"), ink2: g("--g-ink-2"), stopFill: g("--g-stop-fill"), stopInk: g("--g-stop-ink"), selBase: g("--g-sel-base"), shell: g("--shell"), focus: [0, 113, 227] };
+    if (matchMedia("(forced-colors: active)").matches) {
+      const probe = document.createElement("span"); probe.style.cssText = "color:CanvasText;background:Canvas;border-color:Highlight"; document.body.append(probe);
+      const pc = getComputedStyle(probe); const text = hex(pc.color); const bg = hex(pc.backgroundColor); const hi = hex(pc.borderTopColor); probe.remove();
+      Object.assign(T, { plot: bg, node: bg, nodeLine: text, know: text, knowFill: bg, struct: text, structFill: bg, path: text, thin: text, lowText: text, lowLine: text, jev: hi, ok: hi, evidence: hi, evidenceInk: bg, ink: text, ink2: text, stopFill: bg, stopInk: text, selBase: text, shell: bg, focus: hi });
+    }
+    for (const v of view.nodes.values()) v.fit = null;
+  }
+  const FONT = '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif';
+  const font = (w, px) => `${w} ${px}px ${FONT}`;
+  function fitText(text, max, f) {
+    ctx.font = f; if (ctx.measureText(text).width <= max) return text;
+    let lo = 0; let hi = text.length;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (ctx.measureText(text.slice(0, mid) + "…").width <= max) lo = mid; else hi = mid - 1; }
+    return text.slice(0, lo) + "…";
+  }
+  function rr(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+  const typeOf = (n) => (n.type === "structure" ? [T.struct, T.structFill] : n.type === "root" ? [T.path, T.path] : [T.know, T.knowFill]);
+
+  function anchorOut(ref) { const v = view.nodes.get(ref); return v ? { x: v.x + M.colW, y: v.y + M.rowH / 2, a: v.a, born: v.born } : null; }
+  function anchorIn(to) {
+    if (to[0] === "@") { const p = view.piles.get(to.slice(1)); return p ? { x: p.x, y: p.y + Math.min(p.info.h / 2, 13), a: Math.max(p.a, performance.now() < p.born + 120 ? 1 : p.a), born: p.born, alive: 0, dim: 1 } : null; }
+    const v = view.nodes.get(to); return v ? { x: v.x, y: v.y + M.rowH / 2, a: (v.next || v.t).a > 0 ? Math.max(v.a, performance.now() < v.born + 120 ? 1 : v.a) : v.a, born: v.born, alive: v.alive * ((v.next || v.t).soft ? 0.56 : 1), dim: v.dim } : null;
+  }
+  function curve(a, b, t0, t1) {
+    const dx = Math.max(34, (b.x - a.x) * 0.5); const x1 = a.x + dx; const x2 = b.x - dx;
+    if (t0 <= 0 && t1 >= 1) { ctx.moveTo(a.x, a.y); ctx.bezierCurveTo(x1, a.y, x2, b.y, b.x, b.y); return b; }
+    const bl = (p0, p1, p2, p3, u, v, w) => (1 - u) * (1 - v) * (1 - w) * p0 + (u * (1 - v) * (1 - w) + (1 - u) * v * (1 - w) + (1 - u) * (1 - v) * w) * p1 + (u * v * (1 - w) + u * (1 - v) * w + (1 - u) * v * w) * p2 + u * v * w * p3;
+    const X = (u, v, w) => bl(a.x, x1, x2, b.x, u, v, w); const Y = (u, v, w) => bl(a.y, a.y, b.y, b.y, u, v, w);
+    const end = { x: X(t1, t1, t1), y: Y(t1, t1, t1) };
+    ctx.moveTo(X(t0, t0, t0), Y(t0, t0, t0)); ctx.bezierCurveTo(X(t0, t0, t1), Y(t0, t0, t1), X(t0, t1, t1), Y(t0, t1, t1), end.x, end.y);
+    return end;
+  }
+  // 선이 화면 세로 범위에 걸치는 구간 [t0, t1]. 걸치지 않으면 null
+  function span(a, b, y0, y1) {
+    const lo = Math.min(a.y, b.y); const hi = Math.max(a.y, b.y);
+    if (hi < y0 || lo > y1) return null;
+    if (lo >= y0 && hi <= y1) return FULL;
+    const inv = (yy) => { const sgoal = clamp((yy - a.y) / (b.y - a.y), 0, 1); let l = 0; let h = 1; for (let i = 0; i < 14; i += 1) { const m = (l + h) / 2; if (3 * m * m - 2 * m * m * m < sgoal) l = m; else h = m; } return (l + h) / 2; };
+    let t0 = 0; let t1 = 1;
+    if (a.y < b.y) { if (a.y < y0) t0 = inv(y0); if (b.y > y1) t1 = inv(y1); } else { if (a.y > y1) t0 = inv(y1); if (b.y < y0) t1 = inv(y0); }
+    return t1 > t0 ? [t0, t1] : null;
+  }
+  const FULL = [0, 1];
+  function lanePath(a, b) {
+    const ly = M.laneY; const r = 24;
+    ctx.moveTo(a.x, a.y); ctx.bezierCurveTo(a.x + r, a.y, a.x + r, ly, a.x + 2 * r, ly); ctx.lineTo(b.x - 2 * r, ly); ctx.bezierCurveTo(b.x - r, ly, b.x - r, b.y, b.x, b.y);
+  }
+  function lanePoint(a, b, t) {
+    const ly = M.laneY; const r = 24; const cub = (p0, p1, p2, p3, u) => { const w = 1 - u; return w * w * w * p0 + 3 * w * w * u * p1 + 3 * w * u * u * p2 + u * u * u * p3; };
+    if (t < 0.12) { const u = t / 0.12; return { x: cub(a.x, a.x + r, a.x + r, a.x + 2 * r, u), y: cub(a.y, a.y, ly, ly, u) }; }
+    if (t > 0.88) { const u = (t - 0.88) / 0.12; return { x: cub(b.x - 2 * r, b.x - r, b.x - r, b.x, u), y: cub(ly, ly, b.y, b.y, u) }; }
+    return { x: lerp(a.x + 2 * r, b.x - 2 * r, (t - 0.12) / 0.76), y: ly };
+  }
+  function strokeLane(a, b, t) {
+    if (t < 1) { ctx.save(); ctx.beginPath(); ctx.rect(a.x - 6, -1e5, (b.x - a.x + 12) * t, 2e5); ctx.clip(); }
+    ctx.beginPath(); lanePath(a, b); ctx.stroke();
+    if (t < 1) ctx.restore();
+  }
+  function pointOn(a, b, t) {
+    const dx = Math.max(34, (b.x - a.x) * 0.5); const u = 1 - t;
+    return { x: u * u * u * a.x + 3 * u * u * t * (a.x + dx) + 3 * u * t * t * (b.x - dx) + t * t * t * b.x, y: u * u * u * a.y + 3 * u * u * t * a.y + 3 * u * t * t * b.y + t * t * t * b.y };
+  }
+
+  function draw(now) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    const z = cam.z; const ox = -cam.x * z; const oy = M.headerH - cam.y * z;
+    const text = z >= 0.5;
+    const x0 = cam.x - M.colW - 20; const x1 = cam.x + W / z + 20; const y0 = cam.y - 60; const y1 = cam.y + (H - M.headerH) / z + 60;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, M.headerH - 10, W, H); ctx.clip();
+    ctx.translate(ox, oy); ctx.scale(z, z);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    // 선: 흐린 것 먼저, 굵은 것을 위에
+    const strong = []; const lanes = [];
+    for (const e of view.edges.values()) {
+      if (e.grow <= 0 || now < e.born) continue;
+      const a = anchorOut(e.from); const b = anchorIn(e.to); if (!a || !b) continue;
+      const alpha = Math.min(a.a, b.a); if (alpha < 0.03) continue;
+      if ((a.x > x1 && b.x > x1) || (a.x < x0 && b.x < x0)) continue;
+      if (e.lane) { if (e.kind === "bundle" || e.sel > 0 || b.alive > 0.5 || view.hoverKeys.has(e.key) || (b.y > y0 && b.y < y1)) lanes.push([e, a, b, alpha, e.kind === "bundle" ? 0 : b.alive]); continue; }
+      const sp = span(a, b, y0, y1); if (!sp) continue;
+      const s = e.kind === "climb" ? 1 : e.kind === "bundle" ? 0 : b.alive;
+      if (s > 0.5 || e.sel > 0 || view.hoverKeys.has(e.key)) { strong.push([e, a, b, alpha, s, sp]); if (s > 0.5) continue; }
+      // 흐린 선은 끝이 화면에서 한참 벗어나 있으면 그리지 않는다(펼친 큰 모음에서 수백 줄이 겹칠 뿐이다)
+      if (b.y < y0 - 900 || b.y > y1 + 900) continue;
+      const dashed = e.kind === "bundle" || b.dim > 0.5;
+      ctx.globalAlpha = alpha * (dashed ? 0.85 : 0.6);
+      ctx.strokeStyle = css(mix(T.thin, T.path, s)); ctx.lineWidth = e.kind === "bundle" ? 2.4 : 1.1;
+      ctx.setLineDash(dashed ? (e.kind === "bundle" ? [2, 5] : [4, 4]) : []);
+      ctx.beginPath(); curve(a, b, sp[0], Math.min(sp[1], e.grow)); ctx.stroke();
+      if (text && e.grow >= 1 && sp[1] >= 1 && e.kind !== "bundle") { ctx.setLineDash([]); ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - 6, b.y - 3.2); ctx.lineTo(b.x - 6, b.y + 3.2); ctx.fill(); }
+    }
+    ctx.setLineDash([]);
+    for (const [e, a, b, alpha, s, sp] of strong) {
+      if (s > 0.5) {
+        ctx.globalAlpha = alpha; ctx.strokeStyle = css(T.path); ctx.lineWidth = lerp(1.2, 2.5, s);
+        ctx.beginPath(); const tip = curve(a, b, sp[0], Math.min(sp[1], e.grow)); ctx.stroke();
+        if (e.grow >= 1 && sp[1] >= 1) { ctx.fillStyle = css(T.path); ctx.beginPath(); ctx.moveTo(tip.x + 1, tip.y); ctx.lineTo(tip.x - 7, tip.y - 4.4); ctx.lineTo(tip.x - 7, tip.y + 4.4); ctx.fill(); }
+      }
+      if (e.sel > 0) {
+        ctx.globalAlpha = alpha; ctx.strokeStyle = css(T.selBase); ctx.lineWidth = 5.4; ctx.beginPath(); curve(a, b, sp[0], Math.min(sp[1], e.sel)); ctx.stroke();
+        ctx.strokeStyle = css(T.evidence); ctx.lineWidth = 3.2; ctx.setLineDash([9, 8]); ctx.lineDashOffset = now < view.march ? -(now / 28) % 17 : 0;
+        ctx.beginPath(); curve(a, b, sp[0], Math.min(sp[1], e.sel)); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      }
+      if (view.hoverKeys.has(e.key)) { ctx.globalAlpha = alpha; ctx.strokeStyle = css(T.jev); ctx.lineWidth = 2.2; ctx.setLineDash([5, 4]); ctx.beginPath(); curve(a, b, sp[0], Math.min(sp[1], e.grow)); ctx.stroke(); ctx.setLineDash([]); }
+    }
+    for (const [e, a, b, alpha, st] of lanes) {
+      const dashed = e.kind === "bundle" || (b.dim > 0.5 && st < 0.5);
+      ctx.globalAlpha = alpha * (st > 0.5 ? 1 : dashed ? 0.85 : 0.6); ctx.strokeStyle = css(mix(T.thin, T.path, st)); ctx.lineWidth = e.kind === "bundle" ? 2.4 : lerp(1.1, 2.5, st);
+      ctx.setLineDash(dashed ? (e.kind === "bundle" ? [2, 5] : [4, 4]) : []); strokeLane(a, b, e.grow); ctx.setLineDash([]);
+      if (e.grow >= 1 && e.kind !== "bundle" && text) { ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.moveTo(b.x + (st > 0.5 ? 1 : 0), b.y); ctx.lineTo(b.x - 7, b.y - (st > 0.5 ? 4.4 : 3.2)); ctx.lineTo(b.x - 7, b.y + (st > 0.5 ? 4.4 : 3.2)); ctx.fill(); }
+      if (e.sel > 0) {
+        ctx.globalAlpha = alpha; ctx.strokeStyle = css(T.selBase); ctx.lineWidth = 5.4; strokeLane(a, b, e.sel);
+        ctx.strokeStyle = css(T.evidence); ctx.lineWidth = 3.2; ctx.setLineDash([9, 8]); ctx.lineDashOffset = now < view.march ? -(now / 28) % 17 : 0; strokeLane(a, b, e.sel); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      }
+      if (view.hoverKeys.has(e.key)) { ctx.globalAlpha = alpha; ctx.strokeStyle = css(T.jev); ctx.lineWidth = 2.2; ctx.setLineDash([5, 4]); strokeLane(a, b, e.grow); ctx.setLineDash([]); }
+    }
+    // 윗구조 선의 이름표
+    if (text) for (const e of view.edges.values()) {
+      if (e.kind !== "climb" || !e.primary || e.grow < 1) continue;
+      const a = anchorOut(e.from); const b = anchorIn(e.to); if (!a || !b) continue;
+      const p = pointOn(a, b, 0.5); ctx.font = font(600, 13); const tw = ctx.measureText("윗구조").width + 14;
+      ctx.globalAlpha = Math.min(a.a, b.a); rr(p.x - tw / 2, p.y - 11, tw, 22, 6); ctx.fillStyle = css(T.node); ctx.fill(); ctx.strokeStyle = css(T.path); ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = css(T.path); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("윗구조", p.x, p.y + 0.5); ctx.textAlign = "left";
+    }
+    // 선을 타고 가는 빛
+    for (const f of view.fx) {
+      if (f.type !== "spark" || now < f.at) continue;
+      const e = view.edges.get(f.key); if (!e) continue; const a = anchorOut(e.from); const b = anchorIn(e.to); if (!a || !b || b.a < 0.05) continue;
+      const t = easeOut((now - f.at) / f.dur); const p = e.lane ? lanePoint(a, b, t) : pointOn(a, b, t); const fade = 1 - Math.pow((now - f.at) / f.dur, 3);
+      ctx.globalAlpha = 0.9 * fade * Math.max(b.a, 0.3); ctx.fillStyle = css(e.kind === "climb" || b.alive > 0.5 ? T.path : T.jev);
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3.2, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha *= 0.28; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, 6.2832); ctx.fill();
+    }
+    // 더미
+    for (const p of view.piles.values()) { if (now < p.born || p.x > x1 || p.x < x0 || p.y + p.info.h < y0 || p.y > y1) continue; drawPile(p, now, text); }
+    // 후보
+    const root = model.nodes.get(ROOT);
+    if (root) drawNode(root, view.nodes.get(ROOT), now, text, x0, x1, y0, y1);
+    for (const ref of model.order) drawNode(model.nodes.get(ref), view.nodes.get(ref), now, text, x0, x1, y0, y1);
+    // 고리 효과
+    for (const f of view.fx) {
+      if (f.type !== "ring" || now < f.at) continue;
+      const v = view.nodes.get(f.ref); if (!v || v.a < 0.05) continue;
+      const t = (now - f.at) / f.dur; const k = easeOut(t); const col = T[f.color];
+      ctx.globalAlpha = (1 - t) * 0.7; ctx.strokeStyle = css(col); ctx.lineWidth = lerp(2.4, 0.6, k);
+      if (f.box) { const g = k * 12; rr(v.x - g, v.y - g, M.colW + 2 * g, M.rowH + 2 * g, 5 + g); ctx.stroke(); }
+      else { const cx = f.port ? v.x + M.colW : v.x + M.colW / 2; const cy = v.y + M.rowH / 2; ctx.beginPath(); ctx.arc(cx, cy, lerp(4, f.big ? 120 : 20, k), 0, 6.2832); ctx.stroke(); }
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+    drawThreads(now, z, ox, oy);
+    drawHeader(now, z, ox);
+    // 그물 넓히기: 판 전체를 훑는 빛
+    for (const f of view.fx) {
+      if (f.type !== "wave" || now < f.at) continue;
+      const t = (now - f.at) / f.dur; const x = lerp(-120, W + 360, easeOut(t));
+      const g = ctx.createLinearGradient(x - 360, 0, x + 30, 0); g.addColorStop(0, css(T.path, 0)); g.addColorStop(0.86, css(T.path, 0.13 * (1 - t * t))); g.addColorStop(1, css(T.path, 0));
+      ctx.fillStyle = g; ctx.fillRect(x - 360, 0, 390, H);
+    }
+    // 키보드 초점
+    if (view.focus && view.focus[0] === "#" && document.activeElement === plot) {
+      const c = view.L.cols.find((cc) => cc.hop === Number(view.focus.slice(1)));
+      if (c) { const gx = gaugeX(c, z, ox); ctx.strokeStyle = css(T.focus); ctx.lineWidth = 3; rr(gx - 62, 5, ox + (c.x + c.w) * z + 6 - (gx - 62), 32, 8); ctx.stroke(); }
+    } else if (view.focus && document.activeElement === plot) {
+      const v = view.nodes.get(view.focus) || view.piles.get(view.focus.slice(1));
+      if (v) { ctx.save(); ctx.translate(ox, oy); ctx.scale(z, z); ctx.strokeStyle = css(T.focus); ctx.lineWidth = 3 / z; rr(v.x - 4, v.y - 4, M.colW + 8, (view.focus[0] === "@" ? v.info.h : M.rowH) + 8, 8); ctx.stroke(); ctx.restore(); }
+    }
+  }
+
+  function drawNode(n, v, now, text, x0, x1, y0, y1) {
+    if (!v || now < v.born || v.a < 0.03 || v.x > x1 || v.x < x0 || v.y < y0 || v.y > y1) return;
+    const x = v.x; const y = v.y; const w = M.colW; const h = M.rowH; const [line, fill] = typeOf(n);
+    const alive = v.alive; const dim = v.dim; const isRoot = n.type === "root";
+    const target = v.next || v.t; const distance = Math.hypot(v.x - target.x, v.y - target.y);
+    const labelDistance = Math.min(6, (M.lowPitch - M.rowH) / 2);
+    // 더미로 접혀 사라지는 후보는 한 자리에 모이므로 글을 그리지 않는다
+    const near = target.a > 0 && distance <= labelDistance;
+    const label = text && near; const labelAlpha = label ? 1 - distance / M.rowH : 0;
+    const va = v.a; v.a = va * (1 - 0.8 * clamp((Math.abs(v.y - v.t.y) - 6) / 80, 0, 1));
+    if (v.a < 0.03) { v.a = va; return; }
+    ctx.globalAlpha = v.a;
+    // 선정: 노란 테
+    if (v.sel > 0.02) { ctx.globalAlpha = v.a * v.sel; rr(x - 3.5, y - 3.5, w + 7, h + 7, 8); ctx.strokeStyle = css(T.evidence); ctx.lineWidth = 3; ctx.stroke(); ctx.globalAlpha = v.a; }
+    rr(x, y, w, h, 5);
+    ctx.fillStyle = css(mix(T.node, fill, alive), 1 - 0.6 * dim); ctx.fill();
+    if (v.wipe < 1 && !isRoot) { ctx.save(); ctx.clip(); const k = easeOut(v.wipe); ctx.fillStyle = css(T.node, 1 - k * 0.2); ctx.fillRect(x + w * k, y, w * (1 - k), h); ctx.fillStyle = css(line, 0.35 * (1 - k)); ctx.fillRect(x + w * k - 18, y, 18, h); ctx.restore(); }
+    if (v.flash > 0) { rr(x, y, w, h, 5); ctx.fillStyle = css(T.jev, 0.3 * v.flash); ctx.fill(); }
+    ctx.lineWidth = 1 + alive; ctx.strokeStyle = css(mix(mix(T.nodeLine, T.lowLine, dim), line, alive));
+    if (dim > 0.5 && alive < 0.5) ctx.setLineDash([4, 3]);
+    rr(x + 0.5, y + 0.5, w - 1, h - 1, 5); ctx.stroke(); ctx.setLineDash([]);
+    // 왼쪽 유형 띠: 지식은 한 줄, 구조는 두 줄
+    if (!isRoot) {
+      ctx.fillStyle = css(line, 1 - 0.55 * dim);
+      ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, 5, h, [5, 0, 0, 5]); else ctx.rect(x, y, 5, h); ctx.fill();
+      if (n.type === "structure") ctx.fillRect(x + 7, y + 5, 1.6, h - 10);
+    }
+    const tx = x + (n.type === "structure" ? 15 : 12); const cy = y + h / 2 + 0.5;
+    const portPad = n.type === "structure" ? 4 : 0;
+    if (label) {
+      ctx.globalAlpha = v.a * labelAlpha;
+      const bold = alive > 0.5; const f = font(bold ? 650 : 500, 14);
+      const scoreW = n.score != null || n.byHit || n.judging ? 36 : 4;
+      const key = (bold ? "b" : "r") + scoreW;
+      if (!v.fit || v.fitKey !== key) { v.fit = fitText(n.title, w - (tx - x) - 8 - scoreW - portPad, f); v.fitKey = key; }
+      ctx.font = f; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.fillStyle = isRoot ? css(T.shell) : css(mix(T.ink, T.lowText, dim));
+      ctx.fillText(v.fit, tx, cy);
+      const sx = x + w - 9 - portPad;
+      if (n.score != null && v.scoreA > 0.02) {
+        ctx.globalAlpha = v.a * labelAlpha * v.scoreA; ctx.font = font(bold ? 600 : 500, 13); ctx.textAlign = "right";
+        ctx.fillStyle = css(mix(T.ink2, T.lowText, dim)); ctx.fillText(n.score.toFixed(2), sx, cy + (1 - v.scoreA) * 5); ctx.globalAlpha = v.a * labelAlpha;
+      } else if (n.byHit) {
+        ctx.strokeStyle = css(T.path); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(sx - 5, cy + 5); ctx.lineTo(sx - 5, cy - 5); ctx.moveTo(sx - 9, cy - 1); ctx.lineTo(sx - 5, cy - 5); ctx.lineTo(sx - 1, cy - 1); ctx.stroke();
+      }
+      if (v.judge > 0.02 && n.score == null) {
+        for (let i = 0; i < 3; i += 1) { const ph = playing() ? 0.5 + 0.5 * Math.sin(now / 150 - i * 0.9) : 0.6; ctx.globalAlpha = v.a * v.judge * (0.3 + 0.7 * ph); ctx.fillStyle = css(T.jev); ctx.beginPath(); ctx.arc(sx - 18 + i * 7, cy, 2, 0, 6.2832); ctx.fill(); }
+        ctx.globalAlpha = v.a;
+      }
+      ctx.textAlign = "left";
+    }
+    ctx.globalAlpha = v.a;
+    // Jev가 보는 중: 주황 테와 지나가는 빛
+    if (v.judge > 0.02) {
+      ctx.globalAlpha = v.a * v.judge; ctx.strokeStyle = css(T.jev); ctx.lineWidth = 1.6; ctx.setLineDash([7, 5]); ctx.lineDashOffset = playing() ? -(now / 22) % 12 : 0;
+      rr(x - 2.5, y - 2.5, w + 5, h + 5, 7); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      if (playing() && !reduced()) {
+        const ph = ((now + (v.y % 7) * 40) % 1000) / 1000; const bx = x - 70 + (w + 140) * ph;
+        ctx.save(); rr(x, y, w, h, 5); ctx.clip(); const g = ctx.createLinearGradient(bx - 50, 0, bx + 50, 0); g.addColorStop(0, css(T.jev, 0)); g.addColorStop(0.5, css(T.jev, 0.2)); g.addColorStop(1, css(T.jev, 0));
+        ctx.fillStyle = g; ctx.fillRect(bx - 50, y, 100, h); ctx.restore();
+      }
+      ctx.globalAlpha = v.a;
+    }
+    // 문(구조의 오른쪽 구멍): 빈 원은 아직, 찬 원은 열림
+    if (n.type === "structure" && v.port > 0.02) {
+      const px = x + w; const py = y + h / 2; const pulse = v.read > 0.02 && playing() ? 1 + 0.35 * v.read * (0.5 + 0.5 * Math.sin(now / 90)) : 1;
+      ctx.globalAlpha = v.a * Math.min(1, v.port * 2.2);
+      ctx.beginPath(); ctx.arc(px, py, 4.6 * pulse, 0, 6.2832); ctx.fillStyle = css(mix(T.node, T.path, clamp((v.port - 0.45) / 0.55, 0, 1))); ctx.fill();
+      ctx.lineWidth = 1.6; ctx.strokeStyle = css(mix(T.nodeLine, T.path, clamp((v.port - 0.3) / 0.7, 0, 1))); ctx.stroke(); ctx.globalAlpha = v.a;
+    }
+    if (isRoot || n.climbing) {
+      const pulse = v.read > 0.02 && playing() ? 0.5 + 0.5 * Math.sin(now / 90) : 0;
+      if (pulse > 0) { ctx.globalAlpha = v.a * 0.5 * pulse; ctx.strokeStyle = css(T.path); ctx.lineWidth = 2; rr(x - 3, y - 3, w + 6, h + 6, 8); ctx.stroke(); ctx.globalAlpha = v.a; }
+    }
+    // 선정 칩: 순위. 위 결과 줄의 번호와 같다
+    if (v.sel > 0.02 && text) {
+      const k = easeOut(v.sel); ctx.globalAlpha = v.a * k; const cx = x + 10; const cyy = y + h + 3 - (1 - k) * 8;
+      rr(cx, cyy, 30, M.chipH - 4, 6); ctx.fillStyle = css(T.evidence); ctx.fill();
+      if (label) { ctx.globalAlpha *= labelAlpha; ctx.fillStyle = css(T.evidenceInk); ctx.font = font(700, 13); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(n.rank), cx + 15, cyy + (M.chipH - 4) / 2 + 0.5); ctx.textAlign = "left"; }
+    }
+    // 미뤄 둔 묶음: 구조 아래의 칩. 열 곳이 떨어지면 꺼내 훑는다
+    const put = view.L.dorm.get(n.ref);
+    if (put && text) {
+      ctx.globalAlpha = v.a; ctx.font = font(600, 13); const label = "안 본 " + put; const cw = ctx.measureText(label).width + 34; const cx = x + 10; const cyy = y + h + 3; const ch = M.chipH - 4;
+      for (let i = 1; i >= 0; i -= 1) { rr(cx + 6 + i * 3, cyy + 4 - i * 2, 11, ch - 8, 2); ctx.fillStyle = css(T.node); ctx.fill(); ctx.strokeStyle = css(T.ink2); ctx.lineWidth = 1; ctx.stroke(); }
+      rr(cx + 0.5, cyy + 0.5, cw - 1, ch - 1, 6); ctx.strokeStyle = css(T.ink2, 0.7); ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+      if (near) { ctx.globalAlpha *= labelAlpha; ctx.fillStyle = css(T.ink2); ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, cx + 26, cyy + ch / 2 + 0.5); }
+    }
+    // 가리킨 후보
+    if (view.hover === n.ref) { ctx.globalAlpha = v.a * 0.55; ctx.strokeStyle = css(T.ink); ctx.lineWidth = 1.4; rr(x - 1.5, y - 1.5, w + 3, h + 3, 6.5); ctx.stroke(); }
+    ctx.globalAlpha = 1; v.a = va;
+  }
+
+  function drawPile(p, now, text) {
+    const x = p.x; const y = p.y; const w = M.colW; const info = p.info; const h = info.h; const top = info.grid ? 13 : h / 2;
+    ctx.globalAlpha = p.a * 0.9;
+    for (let i = 2; i >= 0; i -= 1) { rr(x + 8 + i * 3, y + top - 8 - i * 2 + 2, 16, 12, 3); ctx.fillStyle = css(T.node); ctx.fill(); ctx.strokeStyle = css(T.lowLine); ctx.lineWidth = 1; ctx.stroke(); }
+    rr(x + 0.5, y + 0.5, w - 1, h - 1, 5); ctx.strokeStyle = css(T.lowLine); ctx.lineWidth = 1; ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+    if (text) { ctx.font = font(600, 13); ctx.fillStyle = css(T.ink2); ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillText(info.expanded ? "접기" : "+" + Math.round(p.n), x + 38, y + top + 0.5); }
+    if (info.grid) {
+      // 점 하나가 카드 하나. 회색은 아직, 주황은 Jev가 보는 중, 흐린 색은 낮음, 진한 색은 맞음, 노랑은 선정
+      const c = M.cell; const colors = { pend: css(T.nodeLine), jev: css(T.jev), k: css(T.know), s: css(T.struct), kl: css(T.know, 0.3), sl: css(T.struct, 0.3), none: css(T.lowLine, 0.55), sel: css(T.evidence) };
+      const pulse = playing() ? 0.6 + 0.4 * Math.sin(now / 110) : 1; let last = "";
+      for (let i = 0; i < info.cells.length; i += 1) {
+        const v = view.nodes.get(info.cells[i]); const n = model.nodes.get(info.cells[i]); if (!v || !n) continue;
+        const st = n.type === "structure";
+        let key; let size = 3.2;
+        if (v.judge > 0.5) key = "jev"; else if (v.sel > 0.5) { key = "sel"; size = 4.4; } else if (v.alive > 0.5) { key = st ? "s" : "k"; size = 4.4; } else if (v.dim > 0.5) key = n.verdict === "nobody" ? "none" : st ? "sl" : "kl"; else key = "pend";
+        if (key !== last) { ctx.fillStyle = colors[key]; ctx.globalAlpha = p.a * (key === "jev" ? pulse : 1); last = key; }
+        const cx = x + 8 + (i % info.cols) * c; const cy = y + 26 + Math.floor(i / info.cols) * c;
+        ctx.fillRect(cx + (c - 1 - size) / 2, cy + (c - 1 - size) / 2, size, size);
+      }
+    } else if ((p.ring || 0) > 0.03) {
+      // 묶음 고리: 조각 하나가 Jev 호출 하나. 주황은 묻는 중, 남색은 끝남. 동시에 둘셋이 켜질 수 있다
+      const cx = x + w - 18; const cy = y + h / 2; const r = 8; const n = info.segs.length; const gap = n > 1 ? 0.22 : 0;
+      info.segs.forEach((sg, i) => {
+        const a0 = -Math.PI / 2 + (i / n) * 6.2832 + gap / 2; const a1 = -Math.PI / 2 + ((i + 1) / n) * 6.2832 - gap / 2;
+        ctx.globalAlpha = p.a * p.ring * (sg.done ? 0.85 : playing() ? 0.55 + 0.45 * Math.sin(now / 120 + i) : 0.9);
+        ctx.strokeStyle = css(sg.done ? T.path : T.jev); ctx.lineWidth = sg.done ? 2.2 : 3; ctx.beginPath(); ctx.arc(cx, cy, r, a0, a1); ctx.stroke();
+      });
+    }
+    if (view.hover === "@" + p.key) { ctx.globalAlpha = 0.5; ctx.strokeStyle = css(T.ink); ctx.lineWidth = 1.4; rr(x - 1.5, y - 1.5, w + 3, h + 3, 6.5); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+
+  const gaugeX = (c, z, ox) => { const sw = c.w * z; ctx.font = font(650, 14); return ox + c.x * z + sw - ctx.measureText("0.00").width - 16; };
+  // 열 머리: 홉 이름, 지금 나가 있는 Jev 호출(점), 충분성 눈금
+  function drawHeader(now, z, ox) {
+    const L = view.L; const cy = 21;
+    const fade = ctx.createLinearGradient(0, M.headerH - 12, 0, M.headerH + 2); fade.addColorStop(0, css(T.plot, 1)); fade.addColorStop(1, css(T.plot, 0));
+    ctx.fillStyle = css(T.plot); ctx.fillRect(0, 0, W, M.headerH - 12); ctx.fillStyle = fade; ctx.fillRect(0, M.headerH - 12, W, 14);
+    ctx.textBaseline = "middle";
+    for (const c of L.cols) {
+      const sx = ox + c.x * z; const sw = c.w * z; if (sx + sw < -40 || sx > W + 40) continue;
+      ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.font = font(700, 15); ctx.fillStyle = css(T.ink);
+      const name = sw < 96 ? String(c.hop) : hopName(c.hop); ctx.fillText(name, sx, cy);
+      let dx = sx + ctx.measureText(name).width + 10; let k = 0;
+      for (const f of model.inflight.values()) {
+        if (f.hop !== c.hop || !JEV.has(f.stage)) continue;
+        ctx.globalAlpha = playing() ? 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(now / 130 + k * 1.3)) : 0.9; ctx.fillStyle = css(T.jev); ctx.beginPath(); ctx.arc(dx + 3, cy, 3.4, 0, 6.2832); ctx.fill(); dx += 11; k += 1;
+      }
+      const g = view.gauges.get(c.hop);
+      if (g && g.a > 0.02 && sw >= 96) {
+        const col = mix(T.jev, T.ok, g.ok); const gx = gaugeX(c, z, ox);
+        ctx.globalAlpha = g.a; ctx.lineWidth = 3; ctx.strokeStyle = css(T.thin, 0.45); ctx.beginPath(); ctx.arc(gx, cy, 7, 0, 6.2832); ctx.stroke();
+        ctx.strokeStyle = css(col); ctx.lineCap = "round"; ctx.beginPath();
+        if (g.spin && g.score == null) { const a = playing() ? now / 160 : 0; ctx.arc(gx, cy, 7, a, a + 1.5); } else ctx.arc(gx, cy, 7, -Math.PI / 2, -Math.PI / 2 + 6.2832 * clamp(g.v, 0.001, 1));
+        ctx.stroke();
+        const ta = -Math.PI / 2 + 6.2832 * g.th; ctx.strokeStyle = css(T.ink, 0.55); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(gx + Math.cos(ta) * 4, cy + Math.sin(ta) * 4); ctx.lineTo(gx + Math.cos(ta) * 10.5, cy + Math.sin(ta) * 10.5); ctx.stroke();
+        if (g.score != null) { ctx.textAlign = "right"; ctx.font = font(650, 14); ctx.fillStyle = css(col); ctx.fillText(g.score.toFixed(2), sx + sw, cy); }
+        if (sw >= 196) { ctx.textAlign = "right"; ctx.font = font(500, 13); ctx.fillStyle = css(col, 0.9); ctx.fillText("찾음", gx - 15, cy); }
+        ctx.textAlign = "left";
+      }
+    }
+    for (const f of view.fx) {
+      if (f.type !== "gauge" || now < f.at) continue;
+      const c = L.cols.find((cc) => cc.hop === f.hop); if (!c) continue; const t = (now - f.at) / f.dur;
+      ctx.globalAlpha = (1 - t) * 0.8; ctx.strokeStyle = css(f.ok ? T.ok : T.jev); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gaugeX(c, z, ox), cy, 7 + easeOut(t) * (f.ok ? 22 : 10), 0, 6.2832); ctx.stroke();
+    }
+    // 끝난 까닭
+    if (view.stop > 0.02 && L.cols.length) {
+      const c = L.cols[L.cols.length - 1]; const label = stopLabel(model.terminal); ctx.font = font(700, 13);
+      const tw = ctx.measureText(label).width + 30; let bx = ox + (c.x + c.w) * z + 12; if (bx + tw > W - 8) bx = Math.max(8, W - 8 - tw);
+      let s = 1; for (const f of view.fx) if (f.type === "stamp" && now >= f.at) s = 1 + 0.22 * (1 - easeOut((now - f.at) / f.dur));
+      ctx.save(); ctx.translate(bx + tw / 2, cy); ctx.scale(s, s); ctx.globalAlpha = view.stop;
+      const good = model.terminal && model.terminal.stop === "sufficient";
+      rr(-tw / 2, -12, tw, 24, 12); ctx.fillStyle = good ? css(mix(T.plot, T.ok, 0.18)) : css(T.stopFill); ctx.fill(); ctx.strokeStyle = good ? css(T.ok) : css(T.stopInk, 0.7); ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = good ? css(T.ok) : css(T.stopInk); ctx.beginPath(); ctx.arc(-tw / 2 + 12, 0, 3.4, 0, 6.2832); ctx.fill();
+      ctx.textAlign = "left"; ctx.fillText(label, -tw / 2 + 21, 0.5); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // 충분성을 묻는 동안: 물어본 카드들에서 눈금으로 실이 모인다
+  function drawThreads(now, z, ox, oy) {
+    const pointed = view.hover && view.hover[0] === "#" ? view.hover : document.activeElement === plot && view.focus && view.focus[0] === "#" ? view.focus : null;
+    const held = pointed && model.suff.get(Number(pointed.slice(1)));
+    const info = held ? { hop: Number(pointed.slice(1)), refs: held.refs } : view.askInfo; const strength = held ? 1 : view.ask;
+    if (!info || strength < 0.02) return;
+    const c = view.L.cols.find((cc) => cc.hop === info.hop); if (!c) return;
+    const gx = gaugeX(c, z, ox); const gy = 21;
+    ctx.save(); ctx.lineWidth = 1.4; ctx.strokeStyle = css(T.jev); ctx.setLineDash([3, 4]); ctx.lineDashOffset = playing() ? -(now / 30) % 7 : 0;
+    for (const r of info.refs) {
+      const v = view.nodes.get(r); if (!v || v.a < 0.1) continue;
+      const x = ox + (v.x + M.colW * 0.5) * z; const y = oy + v.y * z;
+      ctx.globalAlpha = 0.75 * strength; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x, gy + 18, gx, gy + 9); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 0.9 * strength; ctx.strokeStyle = css(T.jev); ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(ox + (v.x - 2.5) * z, oy + (v.y - 2.5) * z, (M.colW + 5) * z, (M.rowH + 5) * z, 7 * z) : ctx.rect(ox + v.x * z, oy + v.y * z, M.colW * z, M.rowH * z); ctx.stroke();
+      ctx.lineWidth = 1.4; ctx.setLineDash([3, 4]);
+    }
+    ctx.restore();
+  }
+
+  let raf = 0; let lastFrame = 0;
+  function invalidate() { if (!raf) raf = requestAnimationFrame(frame); }
+  function frame(now) {
+    raf = 0; const dt = lastFrame ? Math.min(0.05, (now - lastFrame) / 1000) : 0.016; lastFrame = now;
+    const active = tick(now, dt); draw(now); frames += 1;
+    if (active) invalidate(); else lastFrame = 0;
+  }
+  let frames = 0; let lastW = 0;
+  function resize() {
+    const r = plot.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1); W = Math.round(r.width); H = Math.round(r.height);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const compact = W < 640; const colW = compact ? 196 : 220; const gap = compact ? 100 : 150;
+    const changed = colW !== M.colW || gap !== M.gap || W !== lastW; lastW = W;
+    if (changed) { M.colW = colW; M.gap = gap; for (const v of view.nodes.values()) v.fit = null; sync(performance.now(), false, null); }
+    moveCamera(cam.tx, cam.ty, cam.tz, true); invalidate();
+  }
+
+  // ------------------------------------------------------------------ 6. 재생기
+  // 서버의 시계(사건이 도착하는 때)와 화면의 시계(사건을 보여 주는 때)는 따로 간다.
+  // 화면은 사건을 줄 세워 보여 주되, 결과 줄은 done이 도착하는 즉시 채우고 언제든 건너뛸 수 있다.
+  const player = { events: [], ts: [], received: 0, applied: 0, frameEnds: [], total: null, playing: false, serverDone: false, clock0: 0, lastApply: 0, timer: 0, arrive: 0, fast: false, source: null, liveStart: 0 };
+  const playing = () => player.playing;
+  const GAP = { lexical_seed: 340, structure_noul: 210, content_noul: 210, atom_outline: 260, hit_parent: 340, sufficiency_noul: 330, widen: 500, deferred_scan: 420, selection: 400, run_terminal: 0 };
+  const gapAfter = (ev) => (!ev ? 0 : ev.event === "run" ? 100 : ev.event === "step_completed" ? GAP[ev.data.step.stage] ?? 200 : 0);
+  // 묻는 중인 모습이 최소한 이만큼은 보이게 한다. 동시에 나간 호출은 같은 때 시작하므로 서로 쌓이지 않는다
+  const DWELL = { structure_noul: 220, content_noul: 220, sufficiency_noul: 300, hit_parent: 150, atom_outline: 110, deferred_scan: 240 };
+  const shownAt = new Map();
+  function resetView() { model = createModel(); view.nodes.clear(); view.edges.clear(); view.piles.clear(); view.gauges.clear(); view.fx.length = 0; view.stop = 0; view.ask = 0; view.askInfo = null; view.march = 0; view.hover = null; view.focus = null; ui.expanded.clear(); hidePop(); }
+  function applyNext(animate) {
+    const ev = player.events[player.applied]; player.applied += 1;
+    if (ev.event === "step_started") shownAt.set(ev.data.id, performance.now());
+    const delta = applyEvent(model, ev);
+    sync(performance.now(), animate, delta);
+    if (animate) {
+      if (delta.stage === "selection" || ev.event === "done") showRefs([...model.nodes.values()].filter((n) => n.selected).map((n) => n.ref)); else if (delta.stage && delta.stage !== "run_terminal") followHop(delta.stage === "widen" ? Math.max(0, delta.hop - 1) : delta.hop);
+    }
+    return delta;
+  }
+  function pump() {
+    clearTimeout(player.timer);
+    if (!player.playing) return;
+    const now = performance.now();
+    while (player.applied < player.received) {
+      const i = player.applied; const lag = now - (player.clock0 + player.ts[i]);
+      // 화면이 서버보다 뒤처질수록, 그리고 서버가 이미 끝났으면 남은 연출을 줄여 따라붙는다
+      const factor = player.fast ? 0 : Math.min(player.serverDone && player.liveStart ? 0.5 : 1, lag > 2200 ? 0.35 : lag > 1100 ? 0.6 : 1);
+      const ev = player.events[i]; const began = ev.event === "step_completed" ? shownAt.get(ev.data.step.id) : null;
+      const due = Math.max(player.clock0 + player.ts[i], player.lastApply + gapAfter(player.events[i - 1]) * factor, began != null ? began + (DWELL[ev.data.step.stage] || 0) * factor : 0);
+      if (now + 1 < due && !reduced()) { player.timer = setTimeout(pump, due - now); break; }
+      applyNext(true); player.lastApply = performance.now();
+    }
+    if (player.applied >= player.events.length && player.serverDone) { player.playing = false; player.fast = false; }
+    chrome();
+  }
+  // 사건 하나가 도착했다. 실제 페이지에서는 스트림을 읽는 쪽이 이 함수를 부른다
+  function receive(ev) {
+    const t = eventTime(ev); if (player.events.length === 0) player.t0 = t;
+    player.events.push(ev); player.ts.push(Math.max(player.ts[player.ts.length - 1] || 0, t - player.t0));
+    if (ev.event === "step_completed") player.frameEnds.push(player.events.length);
+    if (ev.event === "done") { player.frameEnds[player.frameEnds.length - 1] = player.events.length; player.serverDone = true; player.total = player.frameEnds.length; serverDone(ev.data); }
+    player.received = player.events.length;
+    if (ev.event === "run") tickSummary();
+    pump();
+  }
+  function beginRun() {
+    clearTimeout(player.timer); clearTimeout(summaryTimer);
+    Object.assign(player, { events: [], ts: [], received: 0, applied: 0, frameEnds: [], total: null, playing: true, serverDone: false, fast: false, source: null, liveStart: performance.now(), lastApply: 0 });
+    player.clock0 = player.liveStart;
+    resetView(); shownAt.clear(); $("more").hidden = true; closeSheet(false);
+    $("tray").replaceChildren(); $("sum-time").textContent = ""; $("sum-jev").textContent = "";
+    moveCamera(-M.padX, -M.padTop, cam.tz, true); setFollow(true);
+    sync(performance.now(), false, null); chrome();
+  }
+  const frameOf = (applied) => { let f = 0; while (f < player.frameEnds.length && player.frameEnds[f] <= applied) f += 1; return f; };
+  // 단계 f의 끝 상태로 간다. 바로 다음 단계면 효과와 함께, 아니면 빈 상태에서 다시 쌓는다
+  function seek(f, animate = true) {
+    clearTimeout(player.timer); player.playing = false; player.fast = false;
+    const target = f <= 0 ? Math.min(1, player.received) : player.frameEnds[Math.min(f, player.frameEnds.length) - 1];
+    if (target > player.applied && frameOf(player.applied) === f - 1 && animate) { while (player.applied < target) applyNext(true); }
+    else if (target !== player.applied) {
+      const expanded = new Set(ui.expanded); model = createModel(); ui.expanded = expanded; player.applied = 0; let last = null;
+      while (player.applied < target) { last = applyEvent(model, player.events[player.applied]); player.applied += 1; }
+      view.fx.length = 0; view.march = 0; view.askInfo = model.asking;
+      sync(performance.now(), animate, null);
+      for (const v of view.nodes.values()) { v.born = Math.min(v.born, performance.now()); v.selAt = 0; }
+      if (ui.follow) { if (model.terminal) showRefs([...model.nodes.values()].filter((n) => n.selected).map((n) => n.ref)); else if (model.last) followHop(model.last.hop); }
+    }
+    chrome();
+  }
+  function seekEvent(index) { seek(0, false); while (player.applied < Math.min(index, player.received)) applyEvent(model, player.events[player.applied++]); sync(performance.now(), false, null); if (model.last) followHop(model.last.hop, true); chrome(); }
+  function play() {
+    if (player.playing) { player.playing = false; clearTimeout(player.timer); chrome(); return; }
+    if (player.serverDone && player.applied >= player.events.length) { seek(0, false); }
+    player.playing = true; player.fast = false; player.liveStart = 0; setFollow(true);
+    player.clock0 = performance.now() - (player.ts[player.applied] || 0); player.lastApply = performance.now() - 400; shownAt.clear();
+    pump();
+  }
+  // 건너뛰기: 받은 데까지 바로 보여 주고, 남은 사건은 도착하는 대로 기다림 없이 반영한다
+  function skip() {
+    clearTimeout(player.timer);
+    const expanded = new Set(ui.expanded);
+    while (player.applied < player.received) applyEvent(model, player.events[player.applied++]);
+    ui.expanded = expanded; view.askInfo = model.asking;
+    sync(performance.now(), false, null);
+    player.fast = !player.serverDone; player.playing = !player.serverDone; setFollow(true);
+    if (model.terminal) showRefs([...model.nodes.values()].filter((n) => n.selected).map((n) => n.ref), true); else if (model.last) followHop(model.last.hop, true);
+    chrome();
+  }
+
+  // ------------------------------------------------------------------ 7. 화면의 나머지
+  function serverDone(d) {
+    const tray = $("tray"); tray.replaceChildren();
+    d.results.forEach((r, i) => {
+      const li = document.createElement("li"); const b = document.createElement("button"); b.type = "button"; b.className = "rchip"; b.style.setProperty("--i", i);
+      const rank = document.createElement("b"); rank.textContent = String(i + 1); const title = document.createElement("span"); title.textContent = r.title; const score = document.createElement("i"); score.textContent = r.score.toFixed(2);
+      b.append(rank, title, score); b.setAttribute("aria-label", `${i + 1}번 ${r.title}, 점수 ${r.score.toFixed(2)}`);
+      b.addEventListener("click", () => { if (player.applied < player.events.length) skip(); const n = [...model.nodes.values()].find((x) => x.nodeId === r.node_id); if (n) openSheet(n.ref, b); });
+      li.append(b); tray.append(li);
+    });
+    if (d.results.length === 0) { const li = document.createElement("li"); li.className = "none"; li.textContent = "찾지 못했습니다."; tray.append(li); }
+    const term = { status: d.status, code: d.error ? d.error.code : null, stop: d.stop_reason };
+    $("status").textContent = `검색 끝. ${stopLabel(term)}. 카드 ${d.results.length}장 선정.`;
+    $("more").hidden = !(d.status === "complete" && d.stop_reason === "sufficient");
+    if (d.status === "error") showSearchError();
+    tickSummary();
+  }
+  let summaryTimer = 0;
+  function tickSummary() {
+    clearTimeout(summaryTimer);
+    const run = player.events[0]; if (!run) { $("sum-time").textContent = ""; $("sum-jev").textContent = ""; return; }
+    const jev = player.events.filter((e) => e.event === "step_started" && JEV.has(e.data.stage)).length;
+    if (player.serverDone) { const done = player.events[player.events.length - 1].data; $("sum-time").textContent = `${((Date.parse(done.completed_at) - Date.parse(run.data.started_at)) / 1000).toFixed(1)}초`; $("sum-jev").textContent = `, Jev ${jev}회`; return; }
+    $("sum-time").textContent = `${((performance.now() - player.liveStart) / 1000).toFixed(1)}초`; $("sum-jev").textContent = "";
+    summaryTimer = setTimeout(tickSummary, 100);
+  }
+  function chrome() {
+    const f = frameOf(player.applied); const total = player.total;
+    $("count").textContent = total ? `${f}/${total}` : String(f);
+    $("narr").textContent = narrate(model);
+    const scrub = $("scrub"); scrub.max = String(player.frameEnds.length); scrub.value = String(f); scrub.setAttribute("aria-valuetext", `${f}단계 ${narrate(model)}`);
+    const pl = $("t-play"); pl.setAttribute("aria-label", player.playing ? "일시정지" : "재생"); pl.title = player.playing ? "일시정지" : "재생";
+    $("play-icon").setAttribute("d", player.playing ? "M4 3h3v10H4zM9 3h3v10H9z" : "M5 3l8 5-8 5z");
+    $("t-first").disabled = $("t-prev").disabled = f === 0; $("t-next").disabled = $("t-last").disabled = player.applied >= player.received && player.serverDone;
+    const canSkip = player.playing && !player.fast && (player.applied < player.received || !player.serverDone);
+    $("t-skip").disabled = !canSkip; $("t-skip").classList.toggle("off", !canSkip);
+    $("t-follow").hidden = ui.follow || !player.playing;
+    invalidate();
+  }
+
+  // 가리킨 후보의 근거. Jev에 실제로 보낸 글은 그 후보를 판정한 호출(call.request.questions)에서 꺼낸다
+  function sentText(n, full) {
+    if (!n.asked) return null;
+    const call = model.calls.get(n.asked.step); const q = call && call.request && call.request.questions && call.request.questions[n.asked.key];
+    if (!q) return null;
+    const lines = String(q.instructions).split("\n");
+    return { text: lines.join("\n"), criteria: full ? q.criteria : null };
+  }
+  function verdictOf(n) {
+    const th = (model.policy && model.policy.structure_threshold) ?? 0.5; const sc = n.score != null ? n.score.toFixed(2) : "";
+    if (n.type === "root") return { score: "", word: "루트에서 그물을 넓힘", ok: true };
+    if (n.selected) return { score: sc, word: `선정 ${n.rank}`, ok: true };
+    if (n.byHit) return { score: "", word: "맞은 카드의 윗구조라 묻지 않고 엶", ok: true };
+    if (n.byRoot) return { score: "", word: "최상위라 묻지 않고 엶", ok: true };
+    if (n.verdict === "open") return { score: sc, word: `열림 (${th.toFixed(2)} 이상)`, ok: true };
+    if (n.verdict === "closed") return { score: sc, word: `닫힘 (${th.toFixed(2)} 미만)`, ok: false };
+    if (n.verdict === "hit") return { score: sc, word: model.selThreshold != null ? `맞음, 선정 기준 ${model.selThreshold.toFixed(2)} 미만` : "맞음", ok: true };
+    if (n.verdict === "low") return { score: sc, word: model.selThreshold != null && n.score >= 0.3 ? `선정 기준 ${model.selThreshold.toFixed(2)} 미만` : "낮음", ok: false };
+    if (n.verdict === "nobody") return { score: "", word: "본문이 없어 묻지 않음", ok: false };
+    return { score: "", word: n.judging ? "묻는 중" : "아직 묻지 않음", ok: false };
+  }
+  function verdictEl(n) {
+    const v = verdictOf(n); const p = document.createElement("p"); p.className = "pop-verdict " + (v.ok ? "ok" : "no");
+    if (v.score) { const b = document.createElement("b"); b.textContent = v.score; p.append(b); }
+    const s = document.createElement("span"); s.textContent = v.word; p.append(s); return p;
+  }
+  function sufficiencyEl(sf) {
+    const el = document.createElement("p"); el.className = "pop-verdict " + (sf.ok ? "ok" : "no");
+    const b = document.createElement("b"); b.textContent = sf.score.toFixed(2); const sp = document.createElement("span");
+    sp.textContent = sf.ok ? `찾는 것이 있다 (${sf.threshold.toFixed(2)} 이상)` : `아직 없다 (${sf.threshold.toFixed(2)} 미만)`;
+    el.append(b, sp); return el;
+  }
+  function sentEl(sent, label = true) {
+    const pre = document.createElement("div"); pre.className = "sent";
+    if (label) { const l = document.createElement("span"); l.className = "sent-label"; l.textContent = "Jev에 보낸 글"; pre.append(l); }
+    pre.append(document.createTextNode(sent.text)); return pre;
+  }
+  const pop = $("pop"); let popTimer = 0;
+  function hidePop() { clearTimeout(popTimer); pop.classList.remove("on"); pop.hidden = true; }
+  function showPop(key) {
+    pop.replaceChildren();
+    let box;
+    if (key[0] === "#") {
+      const hop = Number(key.slice(1)); const sf = model.suff.get(hop); const c = view.L.cols.find((cc) => cc.hop === hop); if (!sf || !c) return hidePop();
+      pop.append(sufficiencyEl(sf));
+      pop.hidden = false;
+      const gx = gaugeX(c, cam.z, -cam.x * cam.z); const pw = pop.offsetWidth; const ph = pop.offsetHeight;
+      pop.style.left = clamp(gx - 40, 8, Math.max(8, W - pw - 8)) + "px"; pop.style.top = clamp(M.headerH - 6, 6, Math.max(6, H - ph - 6)) + "px";
+      requestAnimationFrame(() => pop.classList.add("on")); return;
+    }
+    if (key[0] === "@") {
+      const p = view.piles.get(key.slice(1)); if (!p) return hidePop(); box = { x: p.x, y: p.y, h: p.info.h };
+      const el = document.createElement("p"); el.className = "pop-verdict no"; const s = document.createElement("span"); s.textContent = p.info.expanded ? "눌러서 접기" : `접어 둔 후보 ${p.info.count}개, 눌러서 펼치기`; el.append(s); pop.append(el);
+    } else {
+      const n = model.nodes.get(key); const v = view.nodes.get(key); if (!n || !v) return hidePop(); box = { x: v.x, y: v.y, h: M.rowH };
+      pop.append(verdictEl(n));
+      if (n.snippet && n.type !== "root") { const m = document.createElement("p"); m.className = "pop-match"; m.textContent = "낱말이 걸린 곳: " + n.snippet; pop.append(m); }
+      if (n.again.length) { const m = document.createElement("p"); m.className = "pop-match"; m.textContent = `${hopName(n.again[0])}에서 다시 만남`; pop.append(m); }
+      if (view.L.dorm.get(key)) { const m = document.createElement("p"); m.className = "pop-match"; m.textContent = `자식 ${view.L.dorm.get(key)}개는 미뤄 둠. 열 곳이 떨어지면 훑는다`; pop.append(m); }
+      if (n.type !== "root") { const t = document.createElement("p"); t.className = "pop-match"; t.textContent = n.path.join(" › "); pop.append(t); }
+    }
+    pop.hidden = false;
+    const z = cam.z; const sx = (box.x - cam.x) * z; const sy = M.headerH + (box.y - cam.y) * z; const pw = pop.offsetWidth; const ph = pop.offsetHeight;
+    let left = sx + M.colW * z + 10; if (left + pw > W - 8) left = sx - pw - 10; if (left < 8) left = clamp(sx, 8, Math.max(8, W - pw - 8));
+    let top = left > sx - pw - 11 && left < sx + M.colW * z ? sy + box.h * z + 8 : sy - 4; top = clamp(top, 6, Math.max(6, H - ph - 6));
+    pop.style.left = left + "px"; pop.style.top = top + "px";
+    requestAnimationFrame(() => pop.classList.add("on"));
+  }
+  function updateHoverKeys() {
+    view.hoverKeys.clear(); const key = view.hover || (document.activeElement === plot ? view.focus : null);
+    let cur = key && key[0] !== "@" && key[0] !== "#" ? model.nodes.get(key) : null; let guard = 0;
+    while (cur && guard < 24) { guard += 1; const up = cur.origin === "hit_parent" ? cur.climbFrom[0] : cur.parent; if (!up) break; view.hoverKeys.add(up + ">" + cur.ref); cur = model.nodes.get(up); }
+  }
+  function setHover(key) { if (view.hover === key) return; view.hover = key; plot.classList.toggle("pointing", !!key); updateHoverKeys(); clearTimeout(popTimer); if (key) popTimer = setTimeout(() => showPop(key), 90); else if (document.activeElement !== plot || !view.focus) hidePop(); invalidate(); }
+  function hit(px, py) {
+    if (py < M.headerH - 6) {
+      const ox = -cam.x * cam.z;
+      for (const c of view.L.cols) { if (!model.suff.has(c.hop)) continue; const gx = gaugeX(c, cam.z, ox); if (px > gx - 62 && px < ox + (c.x + c.w) * cam.z + 8 && py > 4) return "#" + c.hop; }
+      return null;
+    }
+    const wx = px / cam.z + cam.x; const wy = (py - M.headerH) / cam.z + cam.y;
+    for (const p of view.piles.values()) if (wx >= p.x && wx <= p.x + M.colW && wy >= p.y - 3 && wy <= p.y + p.info.h + 3) return "@" + p.key;
+    for (const v of view.nodes.values()) if (v.a > 0.4 && wx >= v.x && wx <= v.x + M.colW + 6 && wy >= v.y - 4 && wy <= v.y + M.rowH + 4) return v.ref;
+    return null;
+  }
+  function activate(key, opener) {
+    if (!key) return;
+    if (key[0] === "#") { openSheet(key, opener); return; }
+    if (key[0] === "@") { const k = key.slice(1); if (ui.expanded.has(k)) ui.expanded.delete(k); else ui.expanded.add(k); hidePop(); setFollow(false); sync(performance.now(), true, null); return; }
+    openSheet(key, opener);
+  }
+
+  // 시안의 원문 패널에 기존 카드 요청을 연결한다.
+  const sheet = $("sheet"); let sheetOpener = null; let sheetRef = null;
+  const sheetInset = () => (sheet.classList.contains("open") && W >= 720 ? sheet.offsetWidth : 0);
+  function openSheet(ref, opener) {
+    const n = model.nodes.get(ref); const sf = ref[0] === "#" ? model.suff.get(Number(ref.slice(1))) : null;
+    if (!sf && (!n || n.type === "root")) return;
+    cardVersion += 1; if (activeCardRequest) activeCardRequest.abort(); activeCardRequest = null;
+    sheetOpener = opener || plot; sheetRef = ref; hidePop();
+    $("sheet-title").textContent = sf ? "충분성 판단" : n.title; $("sheet-path").textContent = sf ? hopName(Number(ref.slice(1))) : n.path.slice(0, -1).join(" › ");
+    const body = $("sheet-body"); body.replaceChildren(sf ? sufficiencyEl(sf) : verdictEl(n));
+    const question = sf && model.calls.get(sf.step)?.request?.questions?.sufficiency_0;
+    const sent = sf ? (question ? { text: String(question.instructions), criteria: question.criteria } : null) : sentText(n, true);
+    if (sent) {
+      const det = document.createElement("details"); det.open = !!sf; const sum = document.createElement("summary"); sum.textContent = "Jev에 보낸 글"; det.append(sum, sentEl(sent, false));
+      if (sent.criteria) { const c = document.createElement("div"); c.className = "sent"; c.style.marginTop = "6px"; c.textContent = `맞다: ${sent.criteria.true}\n아니다: ${sent.criteria.false}`; det.append(c); }
+      body.append(det);
+    }
+    if (n) {
+      const origin = document.createElement("section"); origin.className = "origin"; origin.setAttribute("aria-label", "원문");
+      body.append(origin); loadOriginal(n, origin);
+    }
+    body.scrollTop = 0;
+    sheet.hidden = false; void sheet.offsetWidth; sheet.classList.add("open");
+    view.focus = ref; setFollow(false);
+    setTimeout(() => { if (sheetRef === ref) { $("sheet-title").focus({ preventScroll: true }); ensureVisible(ref); } }, 30);
+    invalidate();
+  }
+  function closeSheet(restore = true) {
+    cardVersion += 1; if (activeCardRequest) activeCardRequest.abort(); activeCardRequest = null;
+    if (sheet.hidden) return; sheet.classList.remove("open"); sheetRef = null;
+    $("sheet-body").replaceChildren(); $("sheet-title").textContent = ""; $("sheet-path").textContent = "";
+    setTimeout(() => { if (!sheet.classList.contains("open")) sheet.hidden = true; }, reduced() ? 140 : 400);
+    if (restore && sheetOpener && sheetOpener.isConnected) sheetOpener.focus({ preventScroll: true });
+  }
+  function ensureVisible(key) {
+    const v = key[0] === "@" ? view.piles.get(key.slice(1)) : view.nodes.get(key); if (!v) return;
+    const t = v.t || { x: v.tx, y: v.ty }; const z = cam.tz; const vw = (W - sheetInset()) / z; const vh = (H - M.headerH) / z; let x = cam.tx; let y = cam.ty;
+    if (t.x + M.colW + 16 > x + vw) x = t.x + M.colW + 16 - vw; if (t.x - 16 < x) x = t.x - 16;
+    if (t.y + M.rowH + 30 > y + vh) y = t.y + M.rowH + 30 - vh; if (t.y - 10 < y) y = t.y - 10;
+    if (x !== cam.tx || y !== cam.ty) { const b = bounds(z); cam.tx = clamp(x, b.minX, b.maxX + sheetInset() / z); cam.ty = clamp(y, b.minY, b.maxY); if (reduced()) { cam.x = cam.tx; cam.y = cam.ty; } else cam.mode = "spring"; invalidate(); }
+  }
+
+  // 포인터: 끌어서 옮기기(손을 1:1로 따라가고, 놓으면 속도를 이어받아 미끄러진다), 두 손가락 확대
+  const pointers = new Map(); let drag = null; let pinch = null;
+  const local = (e) => { const r = plot.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  plot.addEventListener("pointerdown", (e) => {
+    if (e.target !== cv && e.target !== plot) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    plot.setPointerCapture(e.pointerId); const p = local(e); pointers.set(e.pointerId, p);
+    if (pointers.size === 1) { drag = { id: e.pointerId, sx: p.x, sy: p.y, cx: cam.x, cy: cam.y, moved: false, hist: [{ t: e.timeStamp, x: p.x, y: p.y }] }; }
+    else if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: cam.z }; drag = null; }
+  });
+  plot.addEventListener("pointermove", (e) => {
+    const p = local(e);
+    if (e.target !== cv && e.target !== plot && !drag && !pinch) { setHover(null); return; }
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, p);
+    if (pinch && pointers.size >= 2) {
+      const [a, b] = [...pointers.values()]; const z = clamp(pinch.z * (Math.hypot(a.x - b.x, a.y - b.y) / pinch.d), minZoom(), 1.6); const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
+      const wx = mx / cam.z + cam.x; const wy = (my - M.headerH) / cam.z + cam.y; cam.z = cam.tz = z; cam.x = cam.tx = wx - mx / z; cam.y = cam.ty = wy - (my - M.headerH) / z; cam.mode = "idle"; setFollow(false); updateZoomLabel(); invalidate(); return;
+    }
+    if (drag && drag.id === e.pointerId) {
+      const dx = p.x - drag.sx; const dy = p.y - drag.sy;
+      if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; plot.classList.add("dragging"); setFollow(false); setHover(null); hidePop(); cam.mode = "drag"; }
+      if (drag.moved) {
+        const b = bounds(); let x = drag.cx - dx / cam.z; let y = drag.cy - dy / cam.z;
+        if (x < b.minX) x = b.minX - rubber(b.minX - x, b.vw); else if (x > b.maxX) x = b.maxX + rubber(x - b.maxX, b.vw);
+        if (y < b.minY) y = b.minY - rubber(b.minY - y, b.vh); else if (y > b.maxY) y = b.maxY + rubber(y - b.maxY, b.vh);
+        cam.x = cam.tx = x; cam.y = cam.ty = y; drag.hist.push({ t: e.timeStamp, x: p.x, y: p.y }); while (drag.hist.length > 2 && e.timeStamp - drag.hist[0].t > 90) drag.hist.shift(); invalidate();
+      }
+      return;
+    }
+    if (e.pointerType === "mouse") setHover(hit(p.x, p.y));
+  });
+  const endPointer = (e) => {
+    const p = local(e); pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null;
+    if (!drag || drag.id !== e.pointerId) return;
+    const d = drag; drag = null; plot.classList.remove("dragging");
+    if (!d.moved) { if (e.type === "pointerup") { const key = hit(p.x, p.y); if (key) activate(key, plot); else { hidePop(); } } return; }
+    const h = d.hist; const first = h[0]; const last = h[h.length - 1]; const dt = Math.max(1, last.t - first.t) / 1000;
+    cam.vx = reduced() ? 0 : -(last.x - first.x) / dt / cam.z; cam.vy = reduced() ? 0 : -(last.y - first.y) / dt / cam.z; cam.mode = "glide"; invalidate();
+  };
+  plot.addEventListener("pointerup", endPointer); plot.addEventListener("pointercancel", endPointer);
+  plot.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse" && !drag) setHover(null); });
+  plot.addEventListener("wheel", (e) => {
+    if (e.target !== cv && e.target !== plot) return;
+    const p = local(e);
+    if (e.ctrlKey || e.metaKey) { e.preventDefault(); const z = clamp(cam.z * Math.exp(-e.deltaY * 0.012), minZoom(), 1.6); const wx = p.x / cam.z + cam.x; const wy = (p.y - M.headerH) / cam.z + cam.y; cam.z = cam.tz = z; cam.x = cam.tx = wx - p.x / z; cam.y = cam.ty = wy - (p.y - M.headerH) / z; cam.mode = "idle"; setFollow(false); updateZoomLabel(); invalidate(); return; }
+    const b = bounds(); const nx = clamp(cam.x + e.deltaX / cam.z, b.minX, b.maxX); const ny = clamp(cam.y + e.deltaY / cam.z, b.minY, b.maxY);
+    if (Math.abs(nx - cam.x) < 0.5 && Math.abs(ny - cam.y) < 0.5) return;
+    e.preventDefault(); cam.x = cam.tx = nx; cam.y = cam.ty = ny; cam.mode = "idle"; setFollow(false); hidePop(); invalidate();
+  }, { passive: false });
+
+  // 키보드: 화살표로 후보 사이를 옮긴다
+  function columnItems(hop) {
+    const out = [];
+    for (const n of model.nodes.values()) if (n.hop === hop && !view.L.hidden.has(n.ref)) { const p = view.L.pos.get(n.ref); if (p) out.push({ key: n.ref, y: p.y }); }
+    for (const p of view.L.piles.values()) if (p.hop === hop) out.push({ key: "@" + p.key, y: p.y });
+    if (model.suff.has(hop)) out.push({ key: "#" + hop, y: -100 });
+    return out.sort((a, b) => a.y - b.y);
+  }
+  function focusKey(key) {
+    if (!key) return; view.focus = key; if (key[0] !== "#") ensureVisible(key); updateHoverKeys(); clearTimeout(popTimer); popTimer = setTimeout(() => showPop(key), 200);
+    let say;
+    if (key[0] === "#") { const sf = model.suff.get(Number(key.slice(1))); say = sf ? `${hopName(Number(key.slice(1)))}까지 찾은 정도 ${sf.score.toFixed(2)}, ${sf.ok ? "찾는 것이 있다" : "아직 없다"}` : ""; }
+    else if (key[0] === "@") { const p = view.L.piles.get(key.slice(1)); say = p ? `접어 둔 후보 ${p.count}개` : ""; }
+    else { const n = model.nodes.get(key); const v = verdictOf(n); say = `${n.title}, ${n.type === "structure" ? "구조" : n.type === "root" ? "루트" : "지식"}, ${hopName(n.hop)}, ${v.score} ${v.word}`; }
+    $("graph-live").textContent = say; invalidate();
+  }
+  plot.addEventListener("keydown", (e) => {
+    if (e.target !== plot) return;
+    const k = e.key;
+    if (k === "+" || k === "=") { zoomTo(cam.tz * 1.25); e.preventDefault(); return; }
+    if (k === "-") { zoomTo(cam.tz / 1.25); e.preventDefault(); return; }
+    if (k === "0") { fitAll(); e.preventDefault(); return; }
+    if (k === "Escape") { hidePop(); return; }
+    if ((k === "Enter" || k === " ") && view.focus) { e.preventDefault(); activate(view.focus, plot); return; }
+    if (!k.startsWith("Arrow")) return;
+    e.preventDefault(); setFollow(false);
+    const cur = view.focus && (view.focus[0] === "#" ? { hop: Number(view.focus.slice(1)), ref: view.focus, parent: null, climbFrom: [] } : view.focus[0] === "@" ? view.L.piles.get(view.focus.slice(1)) : model.nodes.get(view.focus));
+    if (!cur) { const first = columnItems(0)[0]; return focusKey(first && first.key); }
+    const hop = cur.hop; const items = columnItems(hop); const i = items.findIndex((it) => it.key === view.focus);
+    if (k === "ArrowDown") return focusKey((items[i + 1] || items[i]).key);
+    if (k === "ArrowUp") return focusKey((items[i - 1] || items[i]).key);
+    const y = items[i] ? items[i].y : 0; let target = null;
+    if (k === "ArrowLeft") { const up = cur.origin === "hit_parent" ? cur.climbFrom && cur.climbFrom[0] : cur.parent; if (up && !view.L.hidden.has(up) && model.nodes.has(up)) target = up; }
+    else if (view.focus[0] !== "@" && view.focus[0] !== "#") { const kids = [...model.nodes.values()].filter((n) => (n.parent === cur.ref || n.climbFrom.includes(cur.ref)) && view.L.pos.has(n.ref)).sort((a, b) => view.L.pos.get(a.ref).y - view.L.pos.get(b.ref).y); if (kids.length) target = kids[0].ref; }
+    if (!target) { const near = columnItems(hop + (k === "ArrowLeft" ? -1 : 1)).sort((a, b) => Math.abs(a.y - y) - Math.abs(b.y - y))[0]; target = near && near.key; }
+    focusKey(target);
+  });
+  plot.addEventListener("focus", () => { if (plot.matches(":focus-visible") && !view.focus) { const first = columnItems(0)[0]; if (first) focusKey(first.key); } updateHoverKeys(); invalidate(); });
+  plot.addEventListener("blur", () => { hidePop(); updateHoverKeys(); invalidate(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheet.hidden && sheet.classList.contains("open")) closeSheet(); });
+
+  // 단추
+  $("t-play").addEventListener("click", play);
+  $("t-first").addEventListener("click", () => seek(0));
+  $("t-prev").addEventListener("click", () => seek(frameOf(player.applied) - (player.frameEnds[frameOf(player.applied) - 1] === player.applied ? 1 : 0)));
+  $("t-next").addEventListener("click", () => seek(frameOf(player.applied) + 1));
+  $("t-last").addEventListener("click", () => { if (player.serverDone) seek(player.frameEnds.length, false); else skip(); });
+  $("t-skip").addEventListener("click", skip);
+  $("scrub").addEventListener("input", (e) => seek(Number(e.target.value)));
+  $("t-low").addEventListener("click", (e) => { ui.showLow = !ui.showLow; e.currentTarget.setAttribute("aria-pressed", String(ui.showLow)); sync(performance.now(), true, null); });
+  $("t-zin").addEventListener("click", () => zoomTo(cam.tz * 1.25));
+  $("t-zout").addEventListener("click", () => zoomTo(cam.tz / 1.25));
+  $("t-fit").addEventListener("click", fitAll);
+  $("t-follow").addEventListener("click", () => { setFollow(true); if (model.last) followHop(model.last.hop); });
+  $("sheet-close").addEventListener("click", () => closeSheet());
+  $("more").addEventListener("click", () => submitSearch(lastQuery, true));
+
+  const API_BASE_URL = "https://atom.eiaserinnys.me";
+  const RETURN_SELECTOR = "atom-search-motion";
+  let authenticated = false; let googleAvailable = false; let composing = false;
+  let activeSearch = null; let activeCardRequest = null; let searchVersion = 0; let cardVersion = 0; let lastQuery = "";
+  $("login").href = API_BASE_URL + "/api/auth/google?return_to=" + encodeURIComponent(RETURN_SELECTOR);
+  function setAuthMessage(message) { $("auth-message").textContent = message || ""; $("auth-message").hidden = !message; }
+  function updateSearchAvailability() { $("q").disabled = $("go").disabled = !authenticated; $("login").hidden = authenticated || !googleAvailable; }
+  function errorStatus(status) { const error = new Error("request-failed"); error.status = status; return error; }
+  async function getJson(path, signal) {
+    const response = await fetch(API_BASE_URL + path, { method: "GET", credentials: "include", cache: "no-store", headers: { Accept: "application/json" }, signal });
+    if (!response.ok) throw errorStatus(response.status);
+    return response.json();
+  }
       function authErrorMessage(code) {
         const messages = {
           "1": "Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요.",
@@ -719,551 +1592,98 @@
         return messages[code] || "Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요.";
       }
 
-      function clearPrivateData() {
-        searchVersion += 1;
-        cardVersion += 1;
-        if (activeSearch) activeSearch.abort();
-        if (activeCardRequest) activeCardRequest.abort();
-        activeSearch = null;
-        activeCardRequest = null;
-        finishMotion();
-        input.value = "";
-        lastQuery = "";
-        selectedButton = null;
-        selectedResult = null;
-        resultList.replaceChildren();
-        queryNode.hidden = true;
-        queryState.hidden = true;
-        originalPanel.replaceChildren();
-        workbench.hidden = true;
-        cancelButton.hidden = true;
-        showAllButton.hidden = true;
-        retrySearchButton.hidden = true;
-      }
-
-      function enterLoginState(message) {
-        clearPrivateData();
-        authenticated = false;
-        updateSearchAvailability();
-        setAuthMessage(message || "");
-        if (!message) setLiveStatus("로그인이 필요합니다.");
-      }
-
-      async function loadAuthState() {
-        retryAuthButton.hidden = true;
-        setAuthMessage("");
-        setLiveStatus("인증 상태를 확인하고 있습니다.");
-        try {
-          const providers = await getJson("/api/auth/providers");
-          googleAvailable = providers && providers.google === true;
-          const status = await getJson("/api/auth/status");
-          if (!status || status.authenticated !== true) {
-            enterLoginState("");
-            if (!googleAvailable) {
-              setAuthMessage("Google 로그인을 사용할 수 없습니다.");
-              setLiveStatus("");
-            }
-            return;
-          }
-          authenticated = true;
-          updateSearchAvailability();
-          setLiveStatus("");
-        } catch (error) {
-          if (error && error.status === 401) {
-            enterLoginState("");
-            return;
-          }
-          authenticated = false;
-          updateSearchAvailability();
-          setAuthMessage("인증 상태를 확인하지 못했습니다.");
-          retryAuthButton.hidden = false;
-          setLiveStatus("", "error");
+  function clearPrivateData() {
+    searchVersion += 1; if (activeSearch) activeSearch.abort(); activeSearch = null;
+    beginRun(); player.playing = false; player.liveStart = 0;
+    $("q").value = ""; lastQuery = ""; $("status").textContent = ""; $("graph-live").textContent = "";
+    sheetOpener = null; pop.replaceChildren(); pointers.clear(); drag = null; pinch = null;
+    chrome();
+  }
+  function enterLoginState(message) { clearPrivateData(); authenticated = false; updateSearchAvailability(); setAuthMessage(message || ""); }
+  async function loadAuthState() {
+    $("retry-auth").hidden = true; setAuthMessage("");
+    try {
+      const providers = await getJson("/api/auth/providers"); googleAvailable = providers && providers.google === true;
+      const status = await getJson("/api/auth/status");
+      if (!status || status.authenticated !== true) { enterLoginState(googleAvailable ? "" : "Google 로그인을 사용할 수 없습니다."); return; }
+      authenticated = true; updateSearchAvailability();
+    } catch (error) {
+      if (error.status === 401) { enterLoginState(""); return; }
+      authenticated = false; updateSearchAvailability(); setAuthMessage("인증 상태를 확인하지 못했습니다."); $("retry-auth").hidden = false;
+    }
+  }
+  function showSearchError(status) {
+    const message = status === 403 ? "검색에 접근할 수 없습니다." : status === 429 ? "검색이 많습니다. 잠시 뒤 다시 시도해 주세요." : status === 503 ? "검색을 사용할 수 없습니다. 잠시 뒤 다시 시도해 주세요." : "검색을 완료하지 못했습니다.";
+    setAuthMessage(message); $("status").textContent = message;
+  }
+  async function submitSearch(query, exhaustive = false) {
+    if (!authenticated || composing || !query.trim()) return;
+    if (activeSearch) activeSearch.abort(); const version = ++searchVersion; const controller = new AbortController(); activeSearch = controller;
+    lastQuery = query.trim(); setAuthMessage(""); beginRun();
+    const params = new URLSearchParams({ q: lastQuery, engine: "jev", stream: "1" }); if (exhaustive) params.set("exhaustive", "1");
+    let reader;
+    try {
+      const response = await fetch(API_BASE_URL + "/search?" + params, { credentials: "include", cache: "no-store", headers: { Accept: "text/event-stream" }, signal: controller.signal });
+      if (!response.ok) throw errorStatus(response.status);
+      reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = ""; let finished = false;
+      const drain = () => {
+        let split;
+        while ((split = buffer.search(/\r?\n\r?\n/)) >= 0) {
+          const frame = buffer.slice(0, split); const separator = buffer.slice(split).match(/^\r?\n\r?\n/)[0]; buffer = buffer.slice(split + separator.length);
+          let event; const data = [];
+          for (const line of frame.split(/\r?\n/)) { if (line.startsWith("event:")) event = line.slice(6).trim(); else if (line.startsWith("data:")) data.push(line.slice(5).trimStart()); }
+          if (!["run", "step_started", "step_completed", "done"].includes(event)) continue;
+          if (version !== searchVersion || controller.signal.aborted) return;
+          receive({ event, data: JSON.parse(data.join("\n")) }); if (event === "done") finished = true;
         }
+      };
+      while (true) {
+        const chunk = await reader.read(); if (version !== searchVersion || controller.signal.aborted) return;
+        buffer += decoder.decode(chunk.value, { stream: !chunk.done }); drain(); if (chunk.done) break;
       }
+      if (!finished) throw new Error("incomplete-stream");
+    } catch (error) {
+      if (controller.signal.aborted || version !== searchVersion) return;
+      if (error.status === 401) { enterLoginState(""); return; }
+      clearTimeout(player.timer); clearTimeout(summaryTimer); player.playing = false; showSearchError(error.status); chrome();
+    } finally { if (reader) reader.releaseLock(); if (version === searchVersion) activeSearch = null; }
+  }
+  async function loadOriginal(n, origin) {
+    if (activeCardRequest) activeCardRequest.abort(); const version = ++cardVersion; const controller = new AbortController(); activeCardRequest = controller;
+    const notice = (text, retry) => {
+      origin.replaceChildren(); const p = document.createElement("p"); p.textContent = text; p.setAttribute("role", "status"); origin.append(p);
+      if (retry) { const b = document.createElement("button"); b.className = "btn small"; b.textContent = "다시 시도"; b.addEventListener("click", () => loadOriginal(n, origin)); origin.append(b); }
+    };
+    notice("원문을 불러오고 있습니다.");
+    try {
+      const card = await getJson("/cards/" + encodeURIComponent(n.cardId), controller.signal);
+      if (controller.signal.aborted || version !== cardVersion) return;
+      if (!card || String(card.id) !== String(n.cardId)) throw new Error("card-mismatch");
+      origin.replaceChildren(); const link = document.createElement("a"); link.className = "btn small"; link.textContent = "atom에서 열기";
+      link.href = API_BASE_URL + "/#" + encodeURIComponent(n.nodeId); link.target = "_blank"; link.rel = "noopener noreferrer"; origin.append(link);
+      const body = document.createElement("p"); body.style.whiteSpace = "pre-wrap"; body.textContent = typeof card.content === "string" ? card.content : ""; origin.append(body);
+    } catch (error) {
+      if (controller.signal.aborted || version !== cardVersion) return;
+      if (error.status === 401) { enterLoginState(""); return; }
+      notice(error.status === 403 ? "원문에 접근할 수 없습니다." : error.status === 404 ? "카드를 찾을 수 없습니다. 결과에서 다시 선택해 주세요." : "원문을 불러오지 못했습니다.", true);
+    } finally { if (version === cardVersion) activeCardRequest = null; }
+  }
+  $("search-form").addEventListener("submit", (event) => { event.preventDefault(); submitSearch($("q").value); });
+  $("q").addEventListener("compositionstart", () => { composing = true; });
+  $("q").addEventListener("compositionend", () => { composing = false; });
+  $("q").addEventListener("keydown", (event) => { if (event.key === "Enter" && (event.isComposing || composing || event.keyCode === 229)) event.preventDefault(); });
+  $("retry-auth").addEventListener("click", loadAuthState);
+  const pageUrl = new URL(location.href); const initialAuthError = pageUrl.searchParams.get("auth_error");
+  if (initialAuthError) history.replaceState(null, "", pageUrl.pathname);
+  loadAuthState().then(() => { if (initialAuthError) setAuthMessage(authErrorMessage(initialAuthError)); });
 
-      function updateQueryState(message, busy) {
-        queryState.hidden = !busy;
-        queryState.dataset.busy = busy ? "true" : "false";
-      }
+  new ResizeObserver(resize).observe(plot);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readTokens(); invalidate(); });
+  readTokens(); resize();
+  const refit = () => { for (const v of view.nodes.values()) v.fit = null; invalidate(); };
+  if (document.fonts) { document.fonts.addEventListener("loadingdone", refit); document.fonts.ready.then(refit); }
 
-      function cancelMotion() {
-        if (motionFrame) cancelAnimationFrame(motionFrame);
-        motionFrame = 0;
-        motionEntries.forEach((entry) => {
-          entry.node.style.transform = "";
-          entry.node.style.willChange = "";
-        });
-        motionEntries = [];
-        edgeLayout = [];
-        queryEdge = null;
-        showAllButton.hidden = true;
-        connections.replaceChildren();
-      }
-
-      function finishMotion() {
-        if (motionFrame) cancelAnimationFrame(motionFrame);
-        motionFrame = 0;
-        motionEntries.forEach((entry) => {
-          entry.node.style.transform = "translate3d(0, 0, 0)";
-          entry.node.style.willChange = "";
-        });
-        motionEntries = [];
-        showAllButton.hidden = true;
-        measureAndDrawEdges();
-      }
-
-      function setQuery(query, searching) {
-        queryNode.hidden = false;
-        queryValue.textContent = query;
-        updateQueryState(searching ? "검색 중" : "", searching);
-      }
-
-      function breadcrumbText(value) {
-        if (!Array.isArray(value) || value.length === 0) return "";
-        return value.map((part) => String(part)).join(" › ");
-      }
-
-      function plainSnippet(value) {
-        return String(value || "").replace(/<\/?b>/gi, "");
-      }
-
-      function setButtonText(button, value) {
-        button.textContent = value;
-      }
-
-      function clearSelection() {
-        if (selectedButton) selectedButton.setAttribute("aria-pressed", "false");
-        selectedButton = null;
-        selectedResult = null;
-        originalPanel.replaceChildren();
-        measureAndDrawEdges();
-      }
-
-      function createResultNode(result) {
-        const item = document.createElement("li");
-        item.className = "result-item";
-        const button = document.createElement("button");
-        button.className = "apple-button apple-button--secondary result-node";
-        button.type = "button";
-        button.dataset.cardId = String(result.card_id);
-        button.setAttribute("aria-pressed", "false");
-        button.setAttribute("aria-label", "원문 열기: " + String(result.title || "제목 없음"));
-
-        const title = document.createElement("span");
-        title.className = "result-title";
-        title.textContent = String(result.title || "제목 없음");
-        button.append(title);
-
-        const breadcrumb = breadcrumbText(result.node_path);
-        if (breadcrumb) {
-          const path = document.createElement("span");
-          path.className = "breadcrumb";
-          path.textContent = breadcrumb;
-          button.append(path);
-        }
-
-        const snippet = plainSnippet(result.snippet);
-        if (snippet) {
-          const preview = document.createElement("span");
-          preview.className = "result-snippet";
-          preview.textContent = snippet;
-          button.append(preview);
-        }
-
-        button.addEventListener("click", () => selectResult(result, button));
-        item.append(button);
-        return { item: item, button: button };
-      }
-
-      function renderResults(results) {
-        cancelMotion();
-        clearSelection();
-        const nodes = results.map(createResultNode);
-        resultList.replaceChildren(...nodes.map((node) => node.item));
-        setQuery(lastQuery, false);
-        if (results.length === 0) {
-          setLiveStatus("검색 결과가 없습니다.");
-          return;
-        }
-        setLiveStatus("검색 결과가 펼쳐졌습니다.");
-        startMotion(nodes.map((node) => node.button));
-      }
-
-      function relativeRect(element, parentRect) {
-        const rect = element.getBoundingClientRect();
-        return {
-          left: rect.left - parentRect.left,
-          right: rect.right - parentRect.left,
-          top: rect.top - parentRect.top,
-          bottom: rect.bottom - parentRect.top,
-          centerX: rect.left - parentRect.left + rect.width / 2,
-          centerY: rect.top - parentRect.top + rect.height / 2,
-        };
-      }
-
-      function tokenLengthPx(name) {
-        const token = getComputedStyle(root).getPropertyValue(name).trim();
-        const value = Number.parseFloat(token);
-        const rootFontSize = Number.parseFloat(getComputedStyle(root).fontSize);
-        return token.endsWith("rem") ? value * rootFontSize : value;
-      }
-
-      function measureAndDrawEdges() {
-        if (workbench.hidden || queryNode.hidden || resultList.children.length === 0) {
-          connections.replaceChildren();
-          edgeLayout = [];
-          queryEdge = null;
-          return;
-        }
-
-        const parentRect = network.getBoundingClientRect();
-        queryEdge = relativeRect(queryNode, parentRect);
-        edgeLayout = Array.from(resultList.querySelectorAll(".result-node")).map((node) => ({
-          node: node,
-          rect: relativeRect(node, parentRect),
-          cardId: node.dataset.cardId || "",
-        }));
-
-        const mobile = mobileLayout.matches;
-        const corridorWidth = mobile ? tokenLengthPx("--apple-space-6") : 0;
-        const corridorX = mobile
-          ? Math.min(queryEdge.left + corridorWidth / 2, edgeLayout[0].rect.left - corridorWidth / 2)
-          : 0;
-        const cornerRadius = mobile ? tokenLengthPx("--apple-space-2") : 0;
-        const children = edgeLayout.map((entry) => {
-          const endX = entry.rect.left;
-          const endY = entry.rect.centerY;
-          const startX = mobile ? corridorX : queryEdge.right;
-          const startY = mobile ? queryEdge.bottom : queryEdge.centerY;
-          const distance = mobile ? Math.max(0, endY - startY) : Math.max(0, endX - startX);
-          const bend = Math.max(0, Math.min(72, distance * 0.3));
-          const radius = Math.min(cornerRadius, distance / 2);
-          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          path.setAttribute("class", "connection");
-          path.setAttribute("data-card-id", entry.cardId);
-          if (selectedResult && entry.cardId === selectedResult.card_id) {
-            path.classList.add("is-selected");
-          }
-          const d = mobile
-            ? "M " + startX + " " + startY + " L " + corridorX + " " + (endY - radius) + " Q " + corridorX + " " + endY + " " + (corridorX + radius) + " " + endY + " L " + endX + " " + endY
-            : "M " + startX + " " + startY + " C " + (startX + bend) + " " + startY + ", " + (endX - bend) + " " + endY + ", " + endX + " " + endY;
-          path.setAttribute("d", d);
-          return path;
-        });
-        const height = Math.max(network.scrollHeight, parentRect.height);
-        connections.setAttribute("viewBox", "0 0 " + Math.max(1, parentRect.width) + " " + Math.max(1, height));
-        connections.setAttribute("width", String(Math.max(1, parentRect.width)));
-        connections.setAttribute("height", String(Math.max(1, height)));
-        connections.replaceChildren(...children);
-      }
-
-      function startMotion(nodes) {
-        measureAndDrawEdges();
-        if (nodes.length === 0 || reducedMotion.matches) {
-          finishMotion();
-          return;
-        }
-
-        const computed = getComputedStyle(root);
-        const tokenValue = computed.getPropertyValue("--apple-space-6").trim();
-        const tokenNumber = Number.parseFloat(tokenValue);
-        const rootFontSize = Number.parseFloat(getComputedStyle(root).fontSize) || 16;
-        const offset = tokenValue.endsWith("rem") ? tokenNumber * rootFontSize : tokenNumber;
-        const isMobile = mobileLayout.matches;
-        const responseSeconds = 0.4;
-        const omega = (2 * Math.PI) / responseSeconds;
-        const firstFrame = performance.now();
-
-        motionEntries = nodes.map((node, index) => {
-          node.style.willChange = "transform";
-          return {
-            node: node,
-            startAt: firstFrame + index * 42,
-            startX: isMobile ? 0 : -offset,
-            startY: isMobile ? -offset : 0,
-          };
-        });
-
-        function frame(now) {
-          let running = false;
-          motionEntries.forEach((entry) => {
-            const elapsed = Math.max(0, (now - entry.startAt) / 1000);
-            const decay = Math.exp(-omega * elapsed);
-            const x = entry.startX === 0
-              ? 0
-              : (entry.startX + omega * entry.startX * elapsed) * decay;
-            const y = entry.startY === 0
-              ? 0
-              : (entry.startY + omega * entry.startY * elapsed) * decay;
-            const settled = elapsed > responseSeconds * 2.5 || (Math.abs(x) < 0.125 && Math.abs(y) < 0.125);
-            const currentX = settled ? 0 : x;
-            const currentY = settled ? 0 : y;
-            entry.node.style.transform = "translate3d(" + currentX + "px, " + currentY + "px, 0)";
-            if (!settled) running = true;
-          });
-          measureAndDrawEdges();
-          if (running) {
-            motionFrame = requestAnimationFrame(frame);
-          } else {
-            motionFrame = 0;
-            motionEntries.forEach((entry) => {
-              entry.node.style.transform = "";
-              entry.node.style.willChange = "";
-            });
-            motionEntries = [];
-            showAllButton.hidden = true;
-          }
-        }
-
-        showAllButton.hidden = false;
-        motionFrame = requestAnimationFrame(frame);
-      }
-
-      function makeOriginalPanel(result, card) {
-        const details = document.createElement("details");
-        details.className = "apple-details original-details";
-        details.open = true;
-
-        const summary = document.createElement("summary");
-        summary.textContent = String(card.title || result.title || "제목 없음");
-        details.append(summary);
-
-        const content = document.createElement("div");
-        content.className = "original-content";
-
-        const actions = document.createElement("div");
-        actions.className = "detail-actions";
-        const back = document.createElement("button");
-        back.className = "apple-button apple-button--secondary";
-        back.type = "button";
-        setButtonText(back, "결과로 돌아가기");
-        back.addEventListener("click", () => {
-          if (!selectedButton) return;
-          selectedButton.scrollIntoView({
-            behavior: reducedMotion.matches ? "auto" : "smooth",
-            block: "center",
-          });
-          selectedButton.focus({ preventScroll: true });
-        });
-        actions.append(back);
-
-        if (result.node_id) {
-          const link = document.createElement("a");
-          link.className = "apple-button apple-button--secondary";
-          link.href = "https://atom.eiaserinnys.me/#" + encodeURIComponent(result.node_id);
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = "atom에서 열기";
-          actions.append(link);
-        }
-
-        const breadcrumb = breadcrumbText(result.node_path);
-        if (breadcrumb) {
-          const path = document.createElement("p");
-          path.className = "apple-muted breadcrumb";
-          path.textContent = breadcrumb;
-          content.append(path);
-        }
-
-        const body = document.createElement("pre");
-        body.className = "original-body";
-        body.textContent = typeof card.content === "string" ? card.content : "";
-        actions.insertBefore(back, actions.firstChild);
-        content.prepend(actions);
-        content.append(body);
-        details.append(content);
-        originalPanel.replaceChildren(details);
-        return summary;
-      }
-
-      function showCardError(message, retry, isError) {
-        const box = document.createElement("div");
-        box.className = "apple-details original-details";
-        const notice = document.createElement("p");
-        notice.className = "apple-muted original-notice";
-        notice.tabIndex = -1;
-        if (isError !== false) notice.dataset.kind = "error";
-        notice.setAttribute("role", "status");
-        notice.setAttribute("aria-live", "polite");
-        notice.textContent = message;
-        const content = document.createElement("div");
-        content.className = "original-content";
-        content.append(notice);
-        if (retry) {
-          const button = document.createElement("button");
-          button.className = "apple-button apple-button--secondary";
-          button.type = "button";
-          button.textContent = "다시 시도";
-          button.addEventListener("click", retry);
-          content.append(button);
-        }
-        box.append(content);
-        originalPanel.replaceChildren(box);
-        if (mobileLayout.matches) {
-          originalPanel.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
-        }
-        notice.focus({ preventScroll: true });
-      }
-
-      async function selectResult(result, button) {
-        if (activeCardRequest) activeCardRequest.abort();
-        cardVersion += 1;
-        const thisVersion = cardVersion;
-        const controller = new AbortController();
-        activeCardRequest = controller;
-        if (selectedButton) selectedButton.setAttribute("aria-pressed", "false");
-        selectedButton = button;
-        selectedResult = result;
-        button.setAttribute("aria-pressed", "true");
-        measureAndDrawEdges();
-        const cardId = String(result.card_id);
-        showCardError("원문을 불러오고 있습니다.", undefined, false);
-
-        try {
-          const card = await getJson("/cards/" + encodeURIComponent(cardId), controller.signal);
-          if (thisVersion !== cardVersion || controller.signal.aborted) return;
-          if (!card || String(card.id) !== cardId) throw new Error("card-mismatch");
-          const summary = makeOriginalPanel(result, card);
-          measureAndDrawEdges();
-          if (mobileLayout.matches) {
-            originalPanel.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
-          }
-          summary.focus({ preventScroll: true });
-        } catch (error) {
-          if (controller.signal.aborted || thisVersion !== cardVersion) return;
-          if (error && error.status === 401) {
-            enterLoginState("");
-            return;
-          }
-          const message = error && error.status === 403
-            ? "원문에 접근할 수 없습니다."
-            : error && error.status === 404
-              ? "카드를 찾을 수 없습니다. 결과에서 다시 선택해 주세요."
-              : "원문을 불러오지 못했습니다.";
-          showCardError(message, () => selectResult(result, button));
-        } finally {
-          if (thisVersion === cardVersion) activeCardRequest = null;
-        }
-      }
-
-      function cancelSearch() {
-        if (!activeSearch) return;
-        searchVersion += 1;
-        activeSearch.abort();
-        activeSearch = null;
-        cancelButton.hidden = true;
-        updateQueryState("", false);
-        setLiveStatus("검색을 취소했습니다.");
-      }
-
-      async function submitSearch(rawQuery) {
-        const query = String(rawQuery || "").trim();
-        if (!query) {
-          setLiveStatus("검색어를 입력해 주세요.");
-          input.focus();
-          return;
-        }
-        if (!authenticated) {
-          enterLoginState("");
-          return;
-        }
-
-        if (activeSearch) activeSearch.abort();
-        if (activeCardRequest) activeCardRequest.abort();
-        searchVersion += 1;
-        cardVersion += 1;
-        const thisVersion = searchVersion;
-        const controller = new AbortController();
-        activeSearch = controller;
-        lastQuery = query;
-        input.value = query;
-        cancelMotion();
-        selectedButton = null;
-        selectedResult = null;
-        originalPanel.replaceChildren();
-        resultList.replaceChildren();
-        connections.replaceChildren();
-        workbench.hidden = false;
-        setQuery(query, true);
-        cancelButton.hidden = false;
-        showAllButton.hidden = true;
-        retrySearchButton.hidden = true;
-        setLiveStatus("검색 중");
-
-        const params = new URLSearchParams();
-        params.set("q", query);
-        try {
-          const results = await getJson("/search?" + params.toString(), controller.signal);
-          if (thisVersion !== searchVersion || controller.signal.aborted) return;
-          if (!Array.isArray(results)) throw new Error("invalid-search-response");
-          activeSearch = null;
-          cancelButton.hidden = true;
-          renderResults(results);
-        } catch (error) {
-          if (controller.signal.aborted || thisVersion !== searchVersion) return;
-          activeSearch = null;
-          cancelButton.hidden = true;
-          if (error && error.status === 401) {
-            enterLoginState("");
-            return;
-          }
-          if (error && error.status === 403) {
-            resultList.replaceChildren();
-            updateQueryState("", false);
-            setLiveStatus("검색에 접근할 수 없습니다.", "error");
-            return;
-          }
-          updateQueryState("", false);
-          setLiveStatus("검색을 완료하지 못했습니다.", "error");
-          retrySearchButton.hidden = false;
-        }
-      }
-
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        if (composing) return;
-        submitSearch(input.value);
-      });
-
-      input.addEventListener("compositionstart", () => { composing = true; });
-      input.addEventListener("compositionend", () => { composing = false; });
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" && (event.isComposing || composing || event.keyCode === 229)) {
-          event.preventDefault();
-        }
-      });
-
-      cancelButton.addEventListener("click", cancelSearch);
-      showAllButton.addEventListener("click", finishMotion);
-      retrySearchButton.addEventListener("click", () => submitSearch(lastQuery));
-      retryAuthButton.addEventListener("click", loadAuthState);
-
-      window.addEventListener("resize", () => {
-        if (motionFrame) return;
-        measureAndDrawEdges();
-      }, { passive: true });
-
-      if (typeof ResizeObserver === "function") {
-        const resizeObserver = new ResizeObserver(() => {
-          if (!motionFrame) measureAndDrawEdges();
-        });
-        resizeObserver.observe(network);
-      }
-
-      const pageUrl = new URL(window.location.href);
-      const initialAuthError = pageUrl.searchParams.get("auth_error");
-      if (initialAuthError) {
-        history.replaceState(null, "", pageUrl.pathname);
-        setAuthMessage(authErrorMessage(initialAuthError));
-      }
-
-      loadAuthState().then(() => {
-        if (initialAuthError) {
-          setAuthMessage(authErrorMessage(initialAuthError));
-          setLiveStatus("");
-        }
-      });
-    })();
-  </script>
+})();
+</script>
 </body>
 </html>
