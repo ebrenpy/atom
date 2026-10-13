@@ -98,7 +98,7 @@ export function buildSufficiencyPayload(query: string, context: JevSearchContext
     questions: { sufficiency_0: {
       type: "noul",
       instructions: ["이 카드들만 읽으면 요청에 답할 수 있는지 판단하세요.", "요청: " + compactText(query, PAYLOAD_QUERY_CHARS), "찾은 카드:",
-        ...nodes.map((n, index) => `${index + 1}. ${n.path.join(" › ")} — ${n.summary ?? "본문 없음"}`)].join("\n"),
+        ...nodes.map((n, index) => `${index + 1}. ${n.path.join(" › ")}: ${n.summary ?? "본문 없음"}`)].join("\n"),
       criteria: { true: "이 카드들만 읽으면 요청에 답할 수 있다.", false: "이 카드들만으로는 요청에 답할 수 없다." },
     } },
   };
