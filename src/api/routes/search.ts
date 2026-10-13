@@ -2,12 +2,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { searchCards } from "../../services/search.service.js";
 import { runConfiguredJevSearch } from "../../services/jev-search/service.js";
 import { JevSearchRequestError } from "../../services/jev-search/config.js";
-import type { JevSearchInput, JevSearchResponse } from "../../shared/jev-search.js";
+import type { JevSearchInput, JevSearchObserver, JevSearchResponse } from "../../shared/jev-search.js";
 import type { SearchFilters, SearchResult, CardType } from "../../shared/types.js";
 
 export interface SearchHandlerDependencies {
   searchCards(filters: SearchFilters): Promise<SearchResult[]>;
-  runJev(input: JevSearchInput, signal: AbortSignal): Promise<JevSearchResponse>;
+  runJev(input: JevSearchInput, signal: AbortSignal, observer?: JevSearchObserver): Promise<JevSearchResponse>;
 }
 
 export async function searchRoutes(app: FastifyInstance): Promise<void> {
@@ -91,7 +91,8 @@ async function handleJevSearch(req: FastifyRequest, reply: FastifyReply, deps: S
   const contextAgent = readSingle(req.query, "context_agent");
   const contextProject = readSingle(req.query, "context_project");
   const contextTask = readSingle(req.query, "context_task");
-  if ([query, rawLimit, rootCamel, rootSnake, contextAgent, contextProject, contextTask].some((field) => field.invalid)) {
+  const stream = readSingle(req.query, "stream");
+  if ([query, rawLimit, rootCamel, rootSnake, contextAgent, contextProject, contextTask, stream].some((field) => field.invalid)) {
     return reply.code(400).send({ error: { code: "JEV_INPUT_INVALID", message: "Jev search inputs must be single values." } });
   }
   if (query.value === undefined) {
@@ -123,10 +124,35 @@ async function handleJevSearch(req: FastifyRequest, reply: FastifyReply, deps: S
     if (!reply.raw.writableEnded) controller.abort();
   };
   reply.raw.once("close", onResponseClose);
+  let streaming = false;
+  const observer: JevSearchObserver | undefined = stream.value === "1" ? (event) => {
+    if (!streaming) {
+      reply.header("Content-Type", "text/event-stream; charset=utf-8");
+      reply.header("Cache-Control", "no-cache, no-transform");
+      reply.header("X-Accel-Buffering", "no");
+      reply.hijack();
+      for (const [name, value] of Object.entries(reply.getHeaders())) {
+        if (value !== undefined) reply.raw.setHeader(name, value);
+      }
+      reply.raw.writeHead(200);
+      streaming = true;
+    }
+    if (!reply.raw.destroyed) reply.raw.write(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`);
+  } : undefined;
   try {
-    const response = await deps.runJev(input, controller.signal);
+    const response = await deps.runJev(input, controller.signal, observer);
+    if (streaming) {
+      reply.raw.end();
+      return reply;
+    }
     return reply.code(response.status === "error" ? 502 : 200).send(response);
   } catch (error) {
+    if (streaming) {
+      observer?.({ event: "done", data: { status: "error", complete: false, stop_reason: null,
+        completed_at: new Date().toISOString(), results: [], error: { code: "JEV_SEARCH_FAILED", message: "Jev search failed." } } });
+      reply.raw.end();
+      return reply;
+    }
     if (error instanceof JevSearchRequestError) {
       return reply.code(error.statusCode).send({ error: { code: error.code, message: error.message } });
     }

@@ -1,6 +1,7 @@
 import {
   buildContentPayload,
   buildStructurePayload,
+  buildSufficiencyPayload,
   noul,
   selectFeedCards,
   selectionThreshold,
@@ -25,6 +26,14 @@ const candidate = {
 };
 
 describe("Jev prompt and selection contracts", () => {
+  it("asks one sufficiency question using the existing path and summary compaction", () => {
+    const payload = buildSufficiencyPayload("이렐리아 특성", context, [candidate]);
+    expect(Object.keys(payload.questions)).toEqual(["sufficiency_0"]);
+    expect(JSON.parse(payload.state).stage).toBe("sufficiency_noul");
+    expect(payload.questions.sufficiency_0.instructions).toContain("찾은 카드:");
+    expect(payload.questions.sufficiency_0.instructions).toContain("게임 규칙과 적용 사례를 모은다.");
+    expect(payload.questions.sufficiency_0.criteria.true).toBe("이 카드들만 읽으면 요청에 답할 수 있다.");
+  });
   it("builds the v3 structure meaning payload with actual child summaries", () => {
     const payload = buildStructurePayload("이렐리아 특성", context, [candidate], "read");
     const state = JSON.parse(payload.state) as { stage: string; candidates: Array<Record<string, unknown>> };

@@ -1,5 +1,6 @@
 import type { CandidateOccurrence, JevSearchStep } from "../../shared/jev-search.js";
-import type { SearchResult, TreeOutlineNode } from "../../shared/types.js";
+import type { SearchResult, TreeOutlineNode, TreeNodeWithCard } from "../../shared/types.js";
+import { EXCERPT_SOURCE_CHARS, toOutlineExcerpt } from "../outline-excerpt.js";
 import { redactSensitiveText, selectFeedCards, selectionThreshold, type JevChildSummary, type JevPromptCandidate } from "./prompts.js";
 import type { JevSearchPolicy } from "./config.js";
 
@@ -78,7 +79,37 @@ export function toOccurrence(
     traversal_parent_ref: candidate.traversalParentRef,
     canonical_node_id: candidate.isSymlink ? null : candidate.nodeId,
     discovered_in_step_id: discoveredInStepId,
+    hop: 0,
+    origin: "outline",
+    hit_ref: null,
   };
+}
+
+export function lexicalSeedQuery(query: string, maxTerms: number): string {
+  const seen = new Set<string>();
+  const terms: string[] = [];
+  for (const term of query.split(/[\s\p{P}\p{S}]+/u)) {
+    const key = term.toLowerCase();
+    if (Array.from(term).length < 2 || seen.has(key)) continue;
+    seen.add(key);
+    terms.push(term);
+    if (terms.length === maxTerms) break;
+  }
+  return terms.join(" OR ");
+}
+
+export function candidateFromNode(node: TreeNodeWithCard, ancestors: TreeNodeWithCard[], titles?: string[]): JevTraversalCandidate {
+  const path = titles ?? ancestors.map(n => n.card.title);
+  return {
+    nodeId: node.id, cardId: node.card.id, title: safeTitle(node.card.title), cardType: node.card.card_type,
+    isSymlink: node.is_symlink, summary: safeSummary(toOutlineExcerpt(node.card.content === null ? null : Array.from(node.card.content).slice(0, EXCERPT_SOURCE_CHARS).join(""), 200)),
+    path: [...path.map(safeTitle), safeTitle(node.card.title)], pathNodeIds: [...ancestors.map(n => n.id), node.id],
+    traversalDepth: ancestors.length, physicalParentNodeId: node.parent_node_id, traversalParentRef: null,
+  };
+}
+
+export function seedMatchSnippet(snippet: string): string {
+  return safeSummary(snippet.replace(/<[^>]*>/g, "")) ?? "";
 }
 
 export function recordSelection<T extends {

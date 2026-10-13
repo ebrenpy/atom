@@ -15,6 +15,11 @@ export interface JevSearchPolicy {
   runTimeoutMs: number;
   maxCandidates: number;
   maxConcurrentRuns: number;
+  seedLimit: number;
+  seedMaxTerms: number;
+  sufficiencyThreshold: number;
+  maxJevCalls: number;
+  maxParallelJevCalls: number;
 }
 
 export const JEV_SEARCH_POLICY: JevSearchPolicy = {
@@ -30,6 +35,11 @@ export const JEV_SEARCH_POLICY: JevSearchPolicy = {
   runTimeoutMs: 45_000,
   maxCandidates: 20_000,
   maxConcurrentRuns: 2,
+  seedLimit: 24,
+  seedMaxTerms: 12,
+  sufficiencyThreshold: 0.7,
+  maxJevCalls: 24,
+  maxParallelJevCalls: 3,
 };
 
 export interface JevServerConfig {
@@ -106,5 +116,10 @@ export function policyView(policy: JevSearchPolicy = JEV_SEARCH_POLICY): JevSear
     run_timeout_ms: policy.runTimeoutMs,
     max_candidates: policy.maxCandidates,
     max_concurrent_runs: policy.maxConcurrentRuns,
+    seed_limit: policy.seedLimit,
+    seed_max_terms: policy.seedMaxTerms,
+    sufficiency_threshold: policy.sufficiencyThreshold,
+    max_jev_calls: policy.maxJevCalls,
+    max_parallel_jev_calls: policy.maxParallelJevCalls,
   };
 }

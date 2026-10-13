@@ -85,6 +85,25 @@ export function buildContentPayload(
   return buildPayload("content_noul", query, context, candidates, null);
 }
 
+export function buildSufficiencyPayload(query: string, context: JevSearchContext, candidates: JevPromptCandidate[]): JevMeaningPayload {
+  const nodes = candidates.map(compactPayloadNode);
+  return {
+    state: JSON.stringify({
+      stage: "sufficiency_noul",
+      instructions: ["후보는 지금까지 찾은 Atom 지식 카드 묶음이다. 요청에 답하는 데 이 카드들이면 되는지 판단한다.", SESSION_CONTEXT_LINE],
+      user_prompt: compactText(query, PAYLOAD_QUERY_CHARS), session_context: compactSessionContext(context),
+      candidates: nodes.map(stateCandidate),
+    }),
+    model: "jev-latest",
+    questions: { sufficiency_0: {
+      type: "noul",
+      instructions: ["이 카드들만 읽으면 요청에 답할 수 있는지 판단하세요.", "요청: " + compactText(query, PAYLOAD_QUERY_CHARS), "찾은 카드:",
+        ...nodes.map((n, index) => `${index + 1}. ${n.path.join(" › ")} — ${n.summary ?? "본문 없음"}`)].join("\n"),
+      criteria: { true: "이 카드들만 읽으면 요청에 답할 수 있다.", false: "이 카드들만으로는 요청에 답할 수 없다." },
+    } },
+  };
+}
+
 export function takePayloadBatch<T extends JevPromptCandidate>(
   pool: T[],
   maxChars: number,

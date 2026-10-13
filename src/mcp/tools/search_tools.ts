@@ -31,7 +31,7 @@ export function registerSearchTools(server: McpServer, overrides: Partial<Search
       updated_before: z.string().datetime({ offset: true }).optional().describe("Filter: updated_at <= this ISO 8601 timestamp."),
       source_type: z.string().min(1).optional().describe("Filter: exact source_type match (e.g. 'trello', 'github')."),
       strategy: z.enum(["auto", "strict"]).optional().describe("Search strategy. auto (default) retries long plain queries as OR only when strict returns 0; strict disables fallback."),
-      engine: z.enum(["bm25", "jev"]).optional().describe("Search engine. Omit for the existing BM25 result array."),
+      engine: z.enum(["bm25", "jev"]).optional().describe("Search engine. Jev returns the schema version 2 hop trace; omit for the existing BM25 result array."),
       context: z.object({
         agent: z.string().max(160).optional(),
         project: z.string().max(160).optional(),

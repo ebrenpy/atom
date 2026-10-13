@@ -15,13 +15,14 @@ const result: SearchResult = {
 
 function response(): JevSearchResponse {
   return {
-    schema_version: 1,
+    schema_version: 2,
     engine: "jev",
     run_id: "run-1",
     query: "게임 규칙",
     root_node_id: null,
     status: "complete",
     complete: true,
+    stop_reason: "exhausted",
     started_at: "2026-10-11T00:00:00.000Z",
     completed_at: "2026-10-11T00:00:01.000Z",
     policy: {
@@ -37,6 +38,11 @@ function response(): JevSearchResponse {
       run_timeout_ms: 45_000,
       max_candidates: 20_000,
       max_concurrent_runs: 2,
+      seed_limit: 24,
+      seed_max_terms: 12,
+      sufficiency_threshold: 0.7,
+      max_jev_calls: 24,
+      max_parallel_jev_calls: 3,
     },
     results: [],
     trace: { candidates: [], steps: [], calls: [] },
@@ -51,6 +57,27 @@ function makeApp(dependencies: SearchHandlerDependencies) {
 }
 
 describe("Jev REST search boundary", () => {
+  it("8 streams events for stream=1 while pre-stream errors remain JSON", async () => {
+    const envelope = response();
+    const app = makeApp({
+      searchCards: async () => [result],
+      runJev: async (_input, _signal, observer?: (event: any) => void) => {
+        observer?.({ event: "run", data: envelope });
+        observer?.({ event: "done", data: envelope });
+        return envelope;
+      },
+    });
+    const res = await app.inject({ method: "GET", url: "/search?q=test&engine=jev&stream=1" });
+    expect(res.headers["content-type"]).toBe("text/event-stream; charset=utf-8");
+    expect(res.headers["cache-control"]).toBe("no-cache, no-transform");
+    expect(res.headers["x-accel-buffering"]).toBe("no");
+    expect(res.body).toContain("event: run\ndata: ");
+    expect(res.body).toContain("event: done\ndata: ");
+    const invalid = await app.inject({ method: "GET", url: "/search?engine=jev&stream=1" });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.headers["content-type"]).toContain("application/json");
+    await app.close();
+  });
   it("keeps the engine-free BM25 array response unchanged", async () => {
     const filters: unknown[] = [];
     const app = makeApp({

@@ -1,9 +1,10 @@
 import type { CardType, SearchResult } from "./types.js";
 
 export type JevSearchStatus = "complete" | "limited" | "cancelled" | "error";
-export type JevSearchStage = "atom_outline" | "structure_noul" | "content_noul" | "selection" | "run_terminal";
-export type JevAuditStage = "atom_outline" | "structure_noul" | "content_noul";
-export type JevSearchAction = "queued" | "pruned" | "content_scored" | "selected" | "not_selected" | "alias" | "no_body";
+export type JevSearchStage = "atom_outline" | "structure_noul" | "content_noul" | "selection" | "run_terminal" | "lexical_seed" | "hit_parent" | "sufficiency_noul" | "widen";
+export type JevAuditStage = "atom_outline" | "structure_noul" | "content_noul" | "lexical_seed" | "hit_parent" | "sufficiency_noul";
+export type JevSearchAction = "queued" | "pruned" | "content_scored" | "selected" | "not_selected" | "alias" | "no_body" | "opened_by_hit";
+export type JevSearchStopReason = "sufficient" | "exhausted" | null;
 
 export interface JevNoulQuestion {
   type: "noul";
@@ -48,6 +49,11 @@ export interface JevSearchPolicyView {
   run_timeout_ms: number;
   max_candidates: number;
   max_concurrent_runs: number;
+  seed_limit: number;
+  seed_max_terms: number;
+  sufficiency_threshold: number;
+  max_jev_calls: number;
+  max_parallel_jev_calls: number;
 }
 
 export interface CandidateOccurrence {
@@ -65,6 +71,11 @@ export interface CandidateOccurrence {
   traversal_parent_ref: string | null;
   canonical_node_id: string | null;
   discovered_in_step_id: string;
+  hop: number;
+  origin: "lexical_seed" | "hit_parent" | "outline";
+  hit_ref: string | null;
+  lexical_rank?: number;
+  match_snippet?: string;
 }
 
 export interface JevStepDecision {
@@ -79,6 +90,7 @@ export interface JevSearchStep {
   id: string;
   seq: number;
   stage: JevSearchStage;
+  hop: number;
   started_at: string;
   completed_at: string | null;
   call_id: string | null;
@@ -91,6 +103,10 @@ export interface JevSearchStep {
   selected_refs?: string[];
   terminal_status?: JevSearchStatus;
   terminal_code?: string | null;
+  sufficiency_score?: number;
+  sufficiency_threshold?: number;
+  widen_reason?: "no_entry" | "frontier_empty";
+  stop_reason?: JevSearchStopReason;
 }
 
 export interface JevAuditCall {
@@ -110,13 +126,14 @@ export interface JevAuditCall {
 }
 
 export interface JevSearchResponse {
-  schema_version: 1;
+  schema_version: 2;
   engine: "jev";
   run_id: string;
   query: string;
   root_node_id: string | null;
   status: JevSearchStatus;
   complete: boolean;
+  stop_reason: JevSearchStopReason;
   started_at: string;
   completed_at: string;
   policy: JevSearchPolicyView;
@@ -128,3 +145,11 @@ export interface JevSearchResponse {
   };
   error: { code: string; message: string } | null;
 }
+
+export type JevSearchEvent =
+  | { event: "run"; data: Pick<JevSearchResponse, "schema_version" | "engine" | "run_id" | "query" | "root_node_id" | "started_at" | "policy"> }
+  | { event: "step_started"; data: Pick<JevSearchStep, "id" | "seq" | "hop" | "stage" | "started_at" | "candidate_refs"> }
+  | { event: "step_completed"; data: { step: JevSearchStep; candidates: CandidateOccurrence[]; call: JevAuditCall | null } }
+  | { event: "done"; data: Pick<JevSearchResponse, "status" | "complete" | "stop_reason" | "completed_at" | "results" | "error"> };
+
+export type JevSearchObserver = (event: JevSearchEvent) => void;

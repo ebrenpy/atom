@@ -81,12 +81,14 @@ describe("Jev search traversal and trace", () => {
     const tree = fakeTree();
     const judgeCalls: Array<{ stage: string; cardIds: string[] }> = [];
     const deps: JevSearchDependencies = {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: tree.getTreeOutline,
       judge: async (payload) => {
         const state = JSON.parse(payload.state) as { stage: string; candidates: Array<{ card_id: string }> };
         judgeCalls.push({ stage: state.stage, cardIds: state.candidates.map((candidate) => candidate.card_id) });
         return answerPayload(payload, (stage, cardId) => {
+          if (stage === "sufficiency_noul") return 0.1;
           if (stage === "structure_noul") return 0.5;
           return ({ "card-a2": 0.8, "card-b2": 0.65, "card-a-leaf": 0.69, "card-b-leaf": 0.7 } as Record<string, number>)[cardId] ?? 0.4;
         });
@@ -109,7 +111,10 @@ describe("Jev search traversal and trace", () => {
     expect(judgeCalls).toEqual([
       { stage: "structure_noul", cardIds: ["card-a", "card-b"] },
       { stage: "structure_noul", cardIds: ["card-a1", "card-b1"] },
-      { stage: "content_noul", cardIds: ["card-a2", "card-b2", "card-a-leaf", "card-b-leaf"] },
+      { stage: "content_noul", cardIds: ["card-a2", "card-b2"] },
+      { stage: "sufficiency_noul", cardIds: ["card-a2"] },
+      { stage: "content_noul", cardIds: ["card-a-leaf", "card-b-leaf"] },
+      { stage: "sufficiency_noul", cardIds: ["card-a2", "card-b-leaf"] },
     ]);
     expect(response.query).toBe("게임 규칙");
     expect(response.status).toBe("complete");
@@ -159,6 +164,7 @@ describe("Jev search traversal and trace", () => {
       return outline(nodeId, []);
     };
     const response = await searchWithJev({ query: "공유 구조" }, {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline,
       judge: async (payload) => answerPayload(payload, () => 0.7),
@@ -186,6 +192,7 @@ describe("Jev search traversal and trace", () => {
 
   it("returns an empty complete result when no candidates exist", async () => {
     const response = await searchWithJev({ query: "없음" }, {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: async () => outline(null, []),
       judge: async () => { throw new Error("must not judge empty input"); },
@@ -193,12 +200,13 @@ describe("Jev search traversal and trace", () => {
 
     expect(response.status).toBe("complete");
     expect(response.results).toEqual([]);
-    expect(response.trace.steps.map((step) => step.stage)).toEqual(["atom_outline", "selection", "run_terminal"]);
+    expect(response.trace.steps.map((step) => step.stage)).toEqual(["lexical_seed", "widen", "atom_outline", "selection", "run_terminal"]);
   });
 
   it("prunes a structure score immediately below the inclusive 0.50 gate", async () => {
     const tree = fakeTree();
     const response = await searchWithJev({ query: "게임 규칙" }, {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: tree.getTreeOutline,
       judge: async (payload) => answerPayload(payload, (stage) => stage === "structure_noul" ? 0.49 : 1),
@@ -215,6 +223,7 @@ describe("Jev search traversal and trace", () => {
   it("retains a safe failed Noul call and does not turn missing scores into selections", async () => {
     const tree = fakeTree();
     const response = await searchWithJev({ query: "게임 규칙" }, {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: tree.getTreeOutline,
       judge: async () => ({ model: "jev-latest", answers: {}, usage: { input_tokens: 5 } }),
@@ -245,6 +254,7 @@ describe("Jev search traversal and trace", () => {
     const waiting = new Promise<JevMeaningResponse>((resolve) => { release = resolve; });
     const entered = new Promise<void>((resolve) => { started = resolve; });
     const pending = searchWithJev({ query: "게임 규칙" }, {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: tree.getTreeOutline,
       judge: async (payload) => {
@@ -273,6 +283,7 @@ describe("Jev search traversal and trace", () => {
     let abortStarted!: () => void;
     const abortEntered = new Promise<void>((resolve) => { abortStarted = resolve; });
     const abortedPending = searchWithJev({ query: "게임 규칙" }, {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: tree.getTreeOutline,
       judge: async (_payload, signal) => {
@@ -298,6 +309,7 @@ describe("Jev search traversal and trace", () => {
   it("returns limited when the candidate ceiling prevents further discovery", async () => {
     const tree = fakeTree();
     const response = await searchWithJev({ query: "게임 규칙" }, {
+      searchCards: async () => [],
       getNode: async () => null,
       getTreeOutline: tree.getTreeOutline,
       judge: async (payload) => answerPayload(payload, () => 1),

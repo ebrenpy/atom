@@ -1,404 +1,198 @@
 import { randomUUID } from "node:crypto";
-import type {
-  CandidateOccurrence,
-  JevAuditCall,
-  JevAuditStage,
-  JevMeaningPayload,
-  JevMeaningResponse,
-  JevSearchInput,
-  JevSearchResponse,
-  JevSearchStage,
-  JevSearchStatus,
-  JevSearchStep,
-  JevStepDecision,
-} from "../../shared/jev-search.js";
-import type { TreeOutline, TreeNodeWithCard } from "../../shared/types.js";
+import type { JevMeaningPayload, JevMeaningResponse, JevSearchInput, JevSearchObserver, JevSearchResponse, JevSearchStatus, JevSearchStopReason } from "../../shared/jev-search.js";
+import type { SearchFilters, SearchResult, TreeOutline, TreeNodeWithCard } from "../../shared/types.js";
 import { getNode, getTreeOutline } from "../tree.service.js";
+import { searchCards } from "../search.service.js";
 import { JevClient, JevError } from "./client.js";
 import { JevSearchConfigError, JevSearchRequestError, JEV_SEARCH_POLICY, normalizeJevSearchInput, policyView, readJevServerConfig, type JevSearchPolicy } from "./config.js";
-import { candidateFromOutline, childSummaryFromSymlinkOutline, recordSelection, toOccurrence, type JevTraversalCandidate } from "./catalog.js";
-import { makeAuditCall, meaningAuditRequest, outlineAuditRequest, type AuditCallInput } from "./audit.js";
-import { buildContentPayload, buildStructurePayload, JevAnswerError, noul, takePayloadBatch } from "./prompts.js";
+import { recordSelection } from "./catalog.js";
+import { meaningAuditRequest } from "./audit.js";
+import { buildContentPayload, buildStructurePayload, buildSufficiencyPayload, JevAnswerError, noul, selectFeedCards, takePayloadBatch } from "./prompts.js";
+import { JevRunError, JevRunTrace } from "./run.js";
+import { JevSearchCatalog, type SearchCandidate } from "./discovery.js";
 
 export interface JevSearchDependencies {
   getNode(nodeId: string): Promise<TreeNodeWithCard | null>;
   getTreeOutline(nodeId: string | null, depth: number, excerptChars: number): Promise<TreeOutline | null>;
+  searchCards(filters: SearchFilters): Promise<SearchResult[]>;
   judge(payload: JevMeaningPayload, signal?: AbortSignal): Promise<JevMeaningResponse>;
   policy?: JevSearchPolicy;
 }
 
-interface SearchCandidate extends JevTraversalCandidate {
-  ref: string;
-  discoveredInStepId: string;
-  occurrence: CandidateOccurrence;
-  discoveryOrder: number;
-}
-
-interface ScoredContent {
-  candidate: SearchCandidate;
-  score: number;
-}
-
-interface RunFailure {
-  code: string;
-  message: string;
-}
-
+interface ScoredContent { candidate: SearchCandidate; score: number }
 let activeRuns = 0;
 
-export async function searchWithJev(
-  rawInput: JevSearchInput,
-  deps: JevSearchDependencies,
-  callerSignal?: AbortSignal,
-): Promise<JevSearchResponse> {
+export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDependencies, callerSignal?: AbortSignal, observer?: JevSearchObserver): Promise<JevSearchResponse> {
   const policy = deps.policy ?? JEV_SEARCH_POLICY;
   const input = normalizeJevSearchInput(rawInput, policy);
-  if (activeRuns >= policy.maxConcurrentRuns) {
-    throw new JevSearchRequestError("Jev search is at its concurrent run limit.", "JEV_SEARCH_BUSY", 429);
-  }
-
+  if (activeRuns >= policy.maxConcurrentRuns) throw new JevSearchRequestError("Jev search is at its concurrent run limit.", "JEV_SEARCH_BUSY", 429);
   activeRuns += 1;
   const startedAt = new Date().toISOString();
-  const runId = randomUUID();
   const controller = new AbortController();
   let cancelled = callerSignal?.aborted ?? false;
   let timedOut = false;
-  const onCallerAbort = () => {
-    cancelled = true;
-    controller.abort();
-  };
+  const onCallerAbort = () => { cancelled = true; controller.abort(); };
   if (callerSignal && !callerSignal.aborted) callerSignal.addEventListener("abort", onCallerAbort, { once: true });
   if (cancelled) controller.abort();
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, policy.runTimeoutMs);
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, policy.runTimeoutMs);
   timeout.unref?.();
+  const stopped = () => cancelled || timedOut || callerSignal?.aborted === true;
+  const run = new JevRunTrace(randomUUID(), stopped, observer);
+  const catalog = new JevSearchCatalog(deps, run, policy, input.root_node_id);
+  const scored: ScoredContent[] = [];
+  let status: JevSearchStatus = "complete";
+  let stopReason: JevSearchStopReason = null;
+  let error: JevSearchResponse["error"] = null;
+  let lastSufficientRefs = "";
+  let widened = false;
+  let emittedRun = false;
 
-  const occurrences: CandidateOccurrence[] = [];
-  const steps: JevSearchStep[] = [];
-  const auditCalls: JevAuditCall[] = [];
-  const structurePool: SearchCandidate[] = [];
-  const structureParents: SearchCandidate[] = [];
-  const descendantContentPool: SearchCandidate[] = [];
-  const rootContentPool: SearchCandidate[] = [];
-  const scoredContent: ScoredContent[] = [];
-  const firstByCardId = new Map<string, SearchCandidate>();
-  let stepSequence = 0;
-  let callSequence = 0;
-  let candidateSequence = 0;
-  let limitCode: string | null = null;
-  let finalStatus: JevSearchStatus = "complete";
-  let finalError: { code: string; message: string } | null = null;
-  let rootPath: string[] = [];
-  let rootPathNodeIds: string[] = [];
-
-  const stopped = (): boolean => cancelled || timedOut || callerSignal?.aborted === true;
-  const now = (): string => new Date().toISOString();
-  const pushStep = (stage: JevSearchStage, refs: string[] = []): JevSearchStep => {
-    stepSequence += 1;
-    const step: JevSearchStep = {
-      id: `step-${String(stepSequence).padStart(6, "0")}`,
-      seq: stepSequence,
-      stage,
-      started_at: now(),
-      completed_at: null,
-      call_id: null,
-      candidate_refs: refs,
-      decisions: [],
-    };
-    steps.push(step);
-    return step;
-  };
-  const beginCall = (stage: JevAuditStage, candidateCount: number, request: Record<string, unknown>): AuditCallInput => {
-    callSequence += 1;
-    return {
-      callId: `${runId}:call:${String(callSequence).padStart(6, "0")}`,
-      runId,
-      seq: callSequence,
-      stage,
-      candidateCount,
-      startedAt: now(),
-      startedClock: performance.now(),
-      request,
-    };
-  };
-  const finishCall = (call: AuditCallInput, options: Parameters<typeof makeAuditCall>[1]) => {
-    auditCalls.push(makeAuditCall(call, options));
-  };
-
-  const addOutlineRead = async (
-    nodeId: string | null,
-    depth: number,
-    excerptChars: number,
-    purpose: "candidate_discovery" | "symlink_summary",
-    parent: SearchCandidate | null,
-  ): Promise<void> => {
-    const step = pushStep("atom_outline", parent ? [parent.ref] : []);
-    step.purpose = purpose;
-    step.parent_ref = parent?.ref ?? null;
-    const call = beginCall("atom_outline", purpose === "symlink_summary" ? 1 : 0, outlineAuditRequest(nodeId, depth, excerptChars, purpose, parent?.ref ?? null));
-    step.call_id = call.callId;
-
-    let outline: TreeOutline | null;
-    try {
-      if (stopped()) {
-        finishCall(call, { completedAt: null, disposition: "skipped" });
-        return;
-      }
-      outline = await deps.getTreeOutline(nodeId, depth, excerptChars);
-      if (stopped()) {
-        const completedAt = now();
-        step.completed_at = completedAt;
-        finishCall(call, {
-          completedAt,
-          outlineResponse: outline ? { canonical_node_id: outline.canonical_node_id, node_count: outline.nodes.length } : null,
-          disposition: "skipped",
-        });
-        return;
-      }
-      if (!outline) throw new Error("outline missing");
-    } catch (error) {
-      if (stopped()) {
-        finishCall(call, { completedAt: null, disposition: "skipped" });
-        return;
-      }
-      const safeError = { code: "ATOM_OUTLINE_FAILED", message: "Atom tree outline read failed." };
-      step.completed_at = now();
-      finishCall(call, { completedAt: step.completed_at, error: safeError, disposition: "error" });
-      if (purpose === "symlink_summary" && parent) {
-        parent.childSummary = null;
-        return;
-      }
-      throw new JevRunError(safeError.code, safeError.message);
-    }
-
-    step.canonical_node_id = outline.canonical_node_id;
-    if (purpose === "symlink_summary") {
-      if (parent) {
-        parent.childSummary = childSummaryFromSymlinkOutline(outline.nodes);
-      }
-      const completedAt = now();
-      step.completed_at = completedAt;
-      finishCall(call, {
-        completedAt,
-        outlineResponse: { canonical_node_id: outline.canonical_node_id, node_count: outline.nodes.length },
-      });
-      return;
-    }
-
-    const decisions: JevStepDecision[] = [];
-    const summarize: SearchCandidate[] = [];
-    let outlineOrdinal = 0;
-    for (const node of outline.nodes) {
-      if (occurrences.length >= policy.maxCandidates) {
-        limitCode = "CANDIDATE_LIMIT";
-        break;
-      }
-      outlineOrdinal += 1;
-      const traversalDepth = parent ? parent.traversalDepth + 1 : 0;
-      const candidate = candidateFromOutline(
-        node,
-        parent ? parent.path : rootPath,
-        parent ? parent.pathNodeIds : rootPathNodeIds,
-        parent?.ref ?? null,
-        traversalDepth,
-      );
-      candidateSequence += 1;
-      const ref = `${step.id}:${String(outlineOrdinal).padStart(4, "0")}`;
-      const occurrence = toOccurrence(candidate, ref, step.id);
-      const found: SearchCandidate = {
-        ...candidate,
-        ref,
-        discoveredInStepId: step.id,
-        occurrence,
-        discoveryOrder: candidateSequence,
-      };
-      occurrences.push(occurrence);
-      step.candidate_refs.push(ref);
-
-      const first = firstByCardId.get(candidate.cardId);
-      if (first) {
-        occurrence.canonical_node_id = first.occurrence.canonical_node_id;
-        decisions.push({ ref, question_key: null, score: null, action: "alias", reused_from_ref: first.ref });
-        continue;
-      }
-      firstByCardId.set(candidate.cardId, found);
-      if (candidate.cardType === "structure") {
-        structurePool.push(found);
-        if (candidate.isSymlink) summarize.push(found);
-      } else if (candidate.summary === null) {
-        decisions.push({ ref, question_key: null, score: null, action: "no_body", reused_from_ref: null });
-      } else if (parent) {
-        descendantContentPool.push(found);
-      } else {
-        rootContentPool.push(found);
-      }
-    }
-    step.decisions = decisions;
-    const completedAt = now();
-    step.completed_at = completedAt;
-    finishCall(call, {
-      completedAt,
-      outlineResponse: {
-        canonical_node_id: outline.canonical_node_id,
-        node_count: outline.nodes.length,
-        candidate_refs: step.candidate_refs,
-      },
-    });
-
-    if (!limitCode) {
-      for (const symlink of summarize) {
-        if (stopped()) return;
-        await addOutlineRead(symlink.nodeId, 1, 0, "symlink_summary", symlink);
-      }
-    }
-  };
-
-  const judgeBatch = async (stage: "structure_noul" | "content_noul", batch: SearchCandidate[]): Promise<number[] | null> => {
-    if (batch.length === 0 || stopped()) return null;
-    const promptCandidates = batch.map(({ nodeId, cardId, title, path, summary, childSummary }) => ({ nodeId, cardId, title, path, summary, childSummary }));
-    const payload = stage === "structure_noul"
-      ? buildStructurePayload(input.query, input.context, promptCandidates, "read")
-      : buildContentPayload(input.query, input.context, promptCandidates);
-    const step = pushStep(stage, batch.map((candidate) => candidate.ref));
-    const call = beginCall(stage, batch.length, meaningAuditRequest(payload));
-    step.call_id = call.callId;
-    let response: JevMeaningResponse;
+  const judgePayload = async (stage: "structure_noul" | "content_noul" | "sufficiency_noul", batch: SearchCandidate[], payload: JevMeaningPayload): Promise<number[] | null> => {
+    if (stopped()) return null;
+    if (run.jevCalls >= policy.maxJevCalls) { run.limitCode = "CALL_BUDGET"; return null; }
+    run.jevCalls += 1;
+    const step = run.start(stage, batch.map(c => c.ref));
+    const call = run.beginCall(step, stage, batch.length, meaningAuditRequest(payload));
+    let response: JevMeaningResponse | undefined;
     try {
       response = await deps.judge(payload, controller.signal);
-    } catch (error) {
       if (stopped()) {
-        finishCall(call, { completedAt: null, disposition: "skipped" });
+        run.finish(step, call, { completedAt: new Date().toISOString(), response, disposition: "skipped" });
         return null;
       }
-      const safeError = safeJevFailure(error);
-      step.completed_at = now();
-      finishCall(call, { completedAt: step.completed_at, error: safeError, disposition: "error" });
-      throw new JevRunError(safeError.code, safeError.message);
+      const keys = stage === "sufficiency_noul" ? ["sufficiency_0"] : batch.map((_c, i) => `${stage === "structure_noul" ? "structure" : "content"}_${i}`);
+      const scores = keys.map(key => noul(response as JevMeaningResponse, key));
+      if (stage === "sufficiency_noul") {
+        step.sufficiency_score = scores[0];
+        step.sufficiency_threshold = policy.sufficiencyThreshold;
+      } else {
+        step.decisions = batch.map((candidate, i) => ({ ref: candidate.ref, question_key: keys[i], score: scores[i],
+          action: stage === "content_noul" ? "content_scored" : scores[i] >= policy.structureThreshold ? "queued" : "pruned", reused_from_ref: null }));
+      }
+      run.finish(step, call, { completedAt: new Date().toISOString(), response });
+      return scores;
+    } catch (cause) {
+      if (stopped()) { run.finish(step, call, { completedAt: null, disposition: "skipped" }); return null; }
+      const failure = safeJevFailure(cause);
+      run.finish(step, call, { completedAt: new Date().toISOString(), response, error: failure, disposition: "error" });
+      throw new JevRunError(failure.code, failure.message);
     }
-    if (stopped()) {
-      const completedAt = now();
-      step.completed_at = completedAt;
-      finishCall(call, { completedAt, response, disposition: "skipped" });
-      return null;
-    }
+  };
 
-    let scores: number[];
-    try {
-      scores = batch.map((_candidate, index) => noul(response, `${stage === "structure_noul" ? "structure" : "content"}_${index}`));
-    } catch (error) {
-      const safeError = safeJevFailure(error);
-      step.completed_at = now();
-      finishCall(call, { completedAt: step.completed_at, response, error: safeError, disposition: "error" });
-      throw new JevRunError(safeError.code, safeError.message);
+  const judgeHop = async (): Promise<{ frontier: SearchCandidate[]; hits: SearchCandidate[] }> => {
+    const jobs: Array<{ stage: "structure_noul" | "content_noul"; batch: SearchCandidate[]; payload: JevMeaningPayload }> = [];
+    for (const [stage, pool] of [["structure_noul", catalog.structures], ["content_noul", catalog.content]] as const) {
+      const pending = [...pool];
+      while (pending.length) {
+        const build = (items: SearchCandidate[]) => stage === "structure_noul" ? buildStructurePayload(input.query, input.context, items, "read") : buildContentPayload(input.query, input.context, items);
+        const batch = takePayloadBatch(pending.slice(0, policy.batchCandidates), policy.payloadMaxChars, build);
+        jobs.push({ stage, batch, payload: build(batch) });
+        pending.splice(0, batch.length);
+      }
     }
-
-    const completedAt = now();
-    step.completed_at = completedAt;
-    finishCall(call, { completedAt, response });
-    step.decisions = batch.map((candidate, index) => {
-      const score = scores[index] as number;
-      const structure = stage === "structure_noul";
-      const action = structure
-        ? score >= policy.structureThreshold ? "queued" : "pruned"
-        : "content_scored";
-      return {
-        ref: candidate.ref,
-        question_key: `${structure ? "structure" : "content"}_${index}`,
-        score,
-        action,
-        reused_from_ref: null,
-      };
+    catalog.structures = [];
+    catalog.content = [];
+    let cursor = 0;
+    let failure: unknown;
+    const scoresByJob: Array<number[] | null> = [];
+    await Promise.all(Array.from({ length: Math.min(policy.maxParallelJevCalls, jobs.length) }, async () => {
+      while (cursor < jobs.length && !stopped() && !run.limitCode && !failure) {
+        const index = cursor++;
+        const job = jobs[index];
+        try { scoresByJob[index] = await judgePayload(job.stage, job.batch, job.payload); }
+        catch (cause) { failure = cause; }
+      }
+    }));
+    const frontier: SearchCandidate[] = [], hits: SearchCandidate[] = [];
+    jobs.forEach((job, index) => {
+      const scores = scoresByJob[index];
+      if (!scores) return;
+      job.batch.forEach((candidate, i) => {
+        if (job.stage === "structure_noul") {
+          if (scores[i] >= policy.structureThreshold && !catalog.opened.has(candidate.cardId)) {
+            catalog.opened.add(candidate.cardId);
+            frontier.push(candidate);
+          }
+        } else {
+          scored.push({ candidate, score: scores[i] });
+          if (scores[i] >= policy.structureThreshold) hits.push(candidate);
+        }
+      });
     });
-    return scores;
+    if (failure) throw failure;
+    return { frontier, hits };
+  };
+
+  const sufficient = async (): Promise<boolean> => {
+    if (run.limitCode || stopped()) return false;
+    const selected = selectFeedCards(scored.map(item => ({ ...item, order: item.candidate.discoveryOrder })),
+      { scoreFloor: policy.scoreFloor, relativeScoreDelta: policy.relativeScoreDelta, maxResults: input.limit });
+    if (!selected.length || selected[0].score < policy.structureThreshold) return false;
+    const refs = selected.map(item => item.candidate.ref).join(",");
+    if (refs === lastSufficientRefs) return false;
+    lastSufficientRefs = refs;
+    const candidates = selected.map(item => item.candidate);
+    const scores = await judgePayload("sufficiency_noul", candidates, buildSufficiencyPayload(input.query, input.context, candidates));
+    return scores !== null && scores[0] >= policy.sufficiencyThreshold;
   };
 
   try {
     if (input.root_node_id) {
       let root: TreeNodeWithCard | null;
-      try {
-        root = await deps.getNode(input.root_node_id);
-      } catch {
-        throw new JevSearchRequestError("The search scope could not be read.", "JEV_ROOT_READ_FAILED", 502);
-      }
-      if (stopped()) {
-        finalStatus = timedOut ? "limited" : "cancelled";
-        limitCode = timedOut ? "RUN_TIME_LIMIT" : null;
-      } else if (!root) {
-        throw new JevSearchRequestError("The search scope node was not found.", "JEV_ROOT_NOT_FOUND", 404);
-      } else if (root.card.card_type !== "structure") {
-        throw new JevSearchRequestError("The search scope must be a structure node.", "JEV_ROOT_NOT_STRUCTURE", 400);
-      } else {
-        rootPath = [root.card.title];
-        rootPathNodeIds = [root.id];
+      try { root = await deps.getNode(input.root_node_id); }
+      catch { throw new JevSearchRequestError("The search scope could not be read.", "JEV_ROOT_READ_FAILED", 502); }
+      if (!stopped()) {
+        if (!root) throw new JevSearchRequestError("The search scope node was not found.", "JEV_ROOT_NOT_FOUND", 404);
+        if (root.card.card_type !== "structure") throw new JevSearchRequestError("The search scope must be a structure node.", "JEV_ROOT_NOT_STRUCTURE", 400);
+        catalog.rootPath = [root.card.title];
+        catalog.rootPathNodeIds = [root.id];
       }
     }
-
-    if (finalStatus === "complete" && !stopped()) {
-      await addOutlineRead(input.root_node_id ?? null, 2, policy.summaryChars, "candidate_discovery", null);
+    observer?.({ event: "run", data: { schema_version: 2, engine: "jev", run_id: run.runId, query: input.query,
+      root_node_id: input.root_node_id, started_at: startedAt, policy: policyView(policy) } });
+    emittedRun = true;
+    let frontier: SearchCandidate[] = [], hits: SearchCandidate[] = [];
+    if (!stopped()) {
+      await catalog.lexicalSeeds(input.query);
+      if (!run.limitCode && !stopped()) ({ frontier, hits } = await judgeHop());
+      if (await sufficient()) stopReason = "sufficient";
     }
-
-    while (finalStatus === "complete" && !stopped() && !limitCode && (structurePool.length > 0 || structureParents.length > 0)) {
-      const nextCandidate = structurePool[0];
-      const nextParent = structureParents[0];
-      if (nextParent && (!nextCandidate || nextParent.traversalDepth < nextCandidate.traversalDepth)) {
-        if (occurrences.length >= policy.maxCandidates) {
-          limitCode = "CANDIDATE_LIMIT";
-          break;
-        }
-        structureParents.shift();
-        await addOutlineRead(nextParent.nodeId, 2, policy.summaryChars, "candidate_discovery", nextParent);
-        continue;
+    run.hop = 1;
+    while (!stopReason && !stopped() && !run.limitCode) {
+      const [commitParents, commitOutlines] = await Promise.all([
+        catalog.prepareParents(hits), catalog.prepareOutlines(frontier),
+      ]);
+      const parents = commitParents();
+      commitOutlines();
+      if (stopped() || run.limitCode) break;
+      if (frontier.length === 0 && parents.length === 0) {
+        if (widened) { stopReason = "exhausted"; break; }
+        widened = true;
+        const step = run.start("widen");
+        step.widen_reason = run.hop === 1 ? "no_entry" : "frontier_empty";
+        run.finish(step);
+        (await catalog.prepareOutlines([null]))();
       }
-      if (!nextCandidate) continue;
-
-      const maxBatch = structurePool.slice(0, policy.batchCandidates);
-      const batch = takePayloadBatch(maxBatch, policy.payloadMaxChars, (items) => buildStructurePayload(input.query, input.context, items, "read"));
-      const scores = await judgeBatch("structure_noul", batch);
-      if (!scores || stopped() || limitCode) break;
-      structurePool.splice(0, batch.length);
-      for (let index = 0; index < batch.length; index += 1) {
-        if (scores[index] !== undefined && scores[index] >= policy.structureThreshold) structureParents.push(batch[index] as SearchCandidate);
-      }
+      if (stopped() || run.limitCode) break;
+      await catalog.summarize(catalog.structures.filter(c => c.isSymlink));
+      const next = await judgeHop();
+      if (await sufficient()) { stopReason = "sufficient"; break; }
+      frontier = [...next.frontier, ...parents];
+      hits = next.hits;
+      run.hop += 1;
     }
-
     if (stopped()) {
-      finalStatus = timedOut ? "limited" : "cancelled";
-      if (timedOut) limitCode = "RUN_TIME_LIMIT";
-    } else if (limitCode) {
-      finalStatus = "limited";
-    }
-
-    if (finalStatus === "complete" && !limitCode) {
-      descendantContentPool.push(...rootContentPool);
-      while (!stopped() && descendantContentPool.length > 0) {
-        const maxBatch = descendantContentPool.slice(0, policy.batchCandidates);
-        const batch = takePayloadBatch(maxBatch, policy.payloadMaxChars, (items) => buildContentPayload(input.query, input.context, items));
-        const scores = await judgeBatch("content_noul", batch);
-        if (!scores || stopped()) break;
-        descendantContentPool.splice(0, batch.length);
-        batch.forEach((candidate, index) => scoredContent.push({ candidate, score: scores[index] as number }));
-      }
-    }
-
+      status = timedOut ? "limited" : "cancelled";
+      if (timedOut) run.limitCode = "RUN_TIME_LIMIT";
+    } else if (run.limitCode) status = "limited";
+  } catch (cause) {
     if (stopped()) {
-      finalStatus = timedOut ? "limited" : "cancelled";
-      if (timedOut) limitCode = "RUN_TIME_LIMIT";
-    } else if (limitCode) {
-      finalStatus = "limited";
-    }
-  } catch (error) {
-    if (stopped()) {
-      finalStatus = timedOut ? "limited" : "cancelled";
-      if (timedOut) limitCode = "RUN_TIME_LIMIT";
-    } else if (error instanceof JevSearchRequestError) {
-      throw error;
-    } else {
-      finalStatus = "error";
-      finalError = error instanceof JevRunError
-        ? { code: error.code, message: error.message }
-        : { code: "JEV_SEARCH_FAILED", message: "Jev search failed." };
+      status = timedOut ? "limited" : "cancelled";
+      if (timedOut) run.limitCode = "RUN_TIME_LIMIT";
+    } else if (cause instanceof JevSearchRequestError && !emittedRun) throw cause;
+    else {
+      status = "error";
+      error = cause instanceof JevRunError ? { code: cause.code, message: cause.message } : { code: "JEV_SEARCH_FAILED", message: "Jev search failed." };
     }
   } finally {
     clearTimeout(timeout);
@@ -407,71 +201,44 @@ export async function searchWithJev(
   }
 
   let results: JevSearchResponse["results"] = [];
-  if (finalStatus === "complete" || finalStatus === "limited") {
-    const selectionStep = pushStep("selection", scoredContent.map((item) => item.candidate.ref));
-    results = recordSelection(selectionStep, scoredContent, input.limit, policy);
+  if (status === "complete" || status === "limited") {
+    const selection = run.start("selection", scored.map(item => item.candidate.ref));
+    results = recordSelection(selection, scored, input.limit, policy);
+    run.finish(selection);
   }
-  if (finalStatus === "limited") {
-    finalError = {
-      code: limitCode ?? "RUN_TIME_LIMIT",
-      message: limitCode === "CANDIDATE_LIMIT"
-        ? "Jev search reached its candidate limit."
-        : "Jev search reached its time limit.",
-    };
-  }
-  if (finalStatus === "cancelled") {
-    results = [];
-    finalError = { code: "CANCELLED", message: "Jev search was cancelled." };
-  }
-  if (finalStatus === "error") results = [];
-
-  const completedAt = now();
-  const terminal = pushStep("run_terminal");
-  terminal.started_at = completedAt;
+  if (status === "limited") error = { code: run.limitCode ?? "RUN_TIME_LIMIT", message: run.limitCode === "CALL_BUDGET" ? "Jev search reached its call budget." : run.limitCode === "CANDIDATE_LIMIT" ? "Jev search reached its candidate limit." : "Jev search reached its time limit." };
+  if (status === "cancelled") error = { code: "CANCELLED", message: "Jev search was cancelled." };
+  if (status !== "complete") stopReason = null;
+  const completedAt = new Date().toISOString();
+  const terminal = run.start("run_terminal", [], completedAt);
   terminal.completed_at = completedAt;
-  terminal.terminal_status = finalStatus;
-  terminal.terminal_code = finalError?.code ?? null;
-
-  return {
-    schema_version: 1,
-    engine: "jev",
-    run_id: runId,
-    query: input.query,
-    root_node_id: input.root_node_id ?? null,
-    status: finalStatus,
-    complete: finalStatus === "complete",
-    started_at: startedAt,
-    completed_at: completedAt,
-    policy: policyView(policy),
-    results,
-    trace: { candidates: occurrences, steps, calls: auditCalls },
-    error: finalError,
+  terminal.terminal_status = status;
+  terminal.terminal_code = error?.code ?? null;
+  terminal.stop_reason = stopReason;
+  run.finish(terminal);
+  const response: JevSearchResponse = {
+    schema_version: 2, engine: "jev", run_id: run.runId, query: input.query, root_node_id: input.root_node_id,
+    status, complete: status === "complete", stop_reason: stopReason, started_at: startedAt, completed_at: completedAt,
+    policy: policyView(policy), results,
+    trace: { candidates: run.candidates, steps: run.steps, calls: run.calls.sort((a, b) => a.seq - b.seq) }, error,
   };
+  observer?.({ event: "done", data: { status, complete: response.complete, stop_reason: stopReason, completed_at: completedAt, results, error } });
+  return response;
 }
 
-export async function runConfiguredJevSearch(input: JevSearchInput, signal?: AbortSignal): Promise<JevSearchResponse> {
+export async function runConfiguredJevSearch(input: JevSearchInput, signal?: AbortSignal, observer?: JevSearchObserver): Promise<JevSearchResponse> {
   let config;
-  try {
-    config = readJevServerConfig();
-  } catch (error) {
-    if (error instanceof JevSearchConfigError) {
-      throw new JevSearchRequestError(error.message, error.code, 503);
-    }
-    throw error;
+  try { config = readJevServerConfig(); }
+  catch (cause) {
+    if (cause instanceof JevSearchConfigError) throw new JevSearchRequestError(cause.message, cause.code, 503);
+    throw cause;
   }
   const client = new JevClient(config.baseUrl, config.apiKey);
-  return searchWithJev(input, { getNode, getTreeOutline, judge: client.judge.bind(client) }, signal);
+  return searchWithJev(input, { getNode, getTreeOutline, searchCards, judge: client.judge.bind(client) }, signal, observer);
 }
 
-function safeJevFailure(error: unknown): RunFailure {
+function safeJevFailure(error: unknown): { code: string; message: string } {
   if (error instanceof JevAnswerError) return { code: error.code, message: "Jev response did not include a valid score for every candidate." };
   if (error instanceof JevError) return { code: error.code, message: error.message };
   return { code: "JEV_JUDGMENT_FAILED", message: "Jev judgment failed." };
-}
-
-class JevRunError extends Error {
-  constructor(readonly code: string, message: string) {
-    super(message);
-    this.name = "JevRunError";
-  }
 }
