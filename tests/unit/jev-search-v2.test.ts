@@ -63,7 +63,7 @@ describe("Jev v2 hop contracts", () => {
     expect(rootRead?.decisions.filter(d => String(d.action) === "opened_root").every(d => d.score === null && d.question_key === null)).toBe(true);
     expect(f.judgments.filter(j => j.stage === "structure_noul")).toEqual([]);
     expect(f.judgments.filter(j => j.stage === "content_noul").map(j => j.cards)).toEqual([[rootKnowledge.id], [hitId, siblingId]]);
-    expect(f.reads).toEqual([{ id: parentId, depth: 2 }, { id: second.id, depth: 2 }]);
+    expect(f.reads).toEqual([{ id: second.id, depth: 1 }, { id: parentId, depth: 2 }, { id: second.id, depth: 2 }]);
   });
   it("13 keeps scoped child gates and only reopens a pruned seed when it is a virtual-root child", async () => {
     const f = fixture({ seeds: [], structureScore: 0.43 });

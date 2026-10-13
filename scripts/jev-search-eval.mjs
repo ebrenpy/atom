@@ -47,7 +47,7 @@ export function summarize(rows) {
 export async function requestSearch({ url, apiKey, query, id }, fetchImpl = fetch) {
   const response = await fetchImpl(url, {
     method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "x-api-key": apiKey },
-    body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "search_cards", arguments: { query, engine: "jev" } } }),
+    body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "search_cards", arguments: { query, engine: "jev", include_trace: true } } }),
   });
   if (!response.ok) throw new Error("MCP_HTTP_FAILED");
   const body = await response.text();

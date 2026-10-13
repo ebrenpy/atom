@@ -34,6 +34,7 @@ export interface JevSearchInput {
   root_node_id?: string | null;
   limit?: number;
   context?: Partial<JevSearchContext>;
+  exhaustive?: boolean;
 }
 
 export interface JevSearchPolicyView {
@@ -72,6 +73,7 @@ export interface CandidateOccurrence {
   traversal_parent_ref: string | null;
   canonical_node_id: string | null;
   discovered_in_step_id: string;
+  child_count: number | null;
   hop: number;
   origin: "lexical_seed" | "hit_parent" | "outline";
   hit_ref: string | null;
@@ -108,7 +110,7 @@ export interface JevSearchStep {
   sufficiency_threshold?: number;
   widen_reason?: "no_entry" | "frontier_empty";
   stop_reason?: JevSearchStopReason;
-  deferred_kinds?: Array<"structure" | "content">;
+  deferred_refs?: string[];
 }
 
 export interface JevAuditCall {
@@ -133,6 +135,7 @@ export interface JevSearchResponse {
   run_id: string;
   query: string;
   root_node_id: string | null;
+  exhaustive: boolean;
   status: JevSearchStatus;
   complete: boolean;
   stop_reason: JevSearchStopReason;
@@ -149,9 +152,19 @@ export interface JevSearchResponse {
 }
 
 export type JevSearchEvent =
-  | { event: "run"; data: Pick<JevSearchResponse, "schema_version" | "engine" | "run_id" | "query" | "root_node_id" | "started_at" | "policy"> }
+  | { event: "run"; data: Pick<JevSearchResponse, "schema_version" | "engine" | "run_id" | "query" | "root_node_id" | "exhaustive" | "started_at" | "policy"> }
   | { event: "step_started"; data: Pick<JevSearchStep, "id" | "seq" | "hop" | "stage" | "started_at" | "candidate_refs"> }
   | { event: "step_completed"; data: { step: JevSearchStep; candidates: CandidateOccurrence[]; call: JevAuditCall | null } }
   | { event: "done"; data: Pick<JevSearchResponse, "status" | "complete" | "stop_reason" | "completed_at" | "results" | "error"> };
 
 export type JevSearchObserver = (event: JevSearchEvent) => void;
+
+export interface JevSearchSummary {
+  jev_calls: number;
+  input_tokens: number;
+  elapsed_ms: number;
+  hops: number;
+  candidates: number;
+}
+
+export type JevSearchCompactResponse = Omit<JevSearchResponse, "trace"> & { summary: JevSearchSummary };

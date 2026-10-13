@@ -92,8 +92,12 @@ async function handleJevSearch(req: FastifyRequest, reply: FastifyReply, deps: S
   const contextProject = readSingle(req.query, "context_project");
   const contextTask = readSingle(req.query, "context_task");
   const stream = readSingle(req.query, "stream");
-  if ([query, rawLimit, rootCamel, rootSnake, contextAgent, contextProject, contextTask, stream].some((field) => field.invalid)) {
+  const exhaustive = readSingle(req.query, "exhaustive");
+  if ([query, rawLimit, rootCamel, rootSnake, contextAgent, contextProject, contextTask, stream, exhaustive].some((field) => field.invalid)) {
     return reply.code(400).send({ error: { code: "JEV_INPUT_INVALID", message: "Jev search inputs must be single values." } });
+  }
+  if (exhaustive.value !== undefined && exhaustive.value !== "1") {
+    return reply.code(400).send({ error: { code: "JEV_EXHAUSTIVE_INVALID", message: "Jev exhaustive must be 1 when supplied." } });
   }
   if (query.value === undefined) {
     return reply.code(400).send({ error: { code: "JEV_QUERY_REQUIRED", message: "A search query is required." } });
@@ -113,6 +117,7 @@ async function handleJevSearch(req: FastifyRequest, reply: FastifyReply, deps: S
     query: query.value,
     root_node_id: rootSnake.value ?? rootCamel.value ?? null,
     limit,
+    exhaustive: exhaustive.value === "1",
     context: {
       agent: contextAgent.value,
       project: contextProject.value,
