@@ -20,6 +20,7 @@ function response(): JevSearchResponse {
     run_id: "run-1",
     query: "게임 규칙",
     root_node_id: null,
+    exhaustive: false,
     status: "complete",
     complete: true,
     stop_reason: "exhausted",
@@ -58,6 +59,18 @@ function makeApp(dependencies: SearchHandlerDependencies) {
 }
 
 describe("Jev REST search boundary", () => {
+  it("15 accepts exhaustive=1 and rejects other supplied values", async () => {
+    const inputs: unknown[] = [];
+    const app = makeApp({ searchCards: async () => [result], runJev: async input => { inputs.push(input); return response(); } });
+    const res = await app.inject("/search?q=test&engine=jev&exhaustive=1");
+    expect(res.statusCode).toBe(200);
+    expect(inputs).toEqual([expect.objectContaining({ exhaustive: true })]);
+    for (const value of ["0", "true", "false", "2"]) {
+      const bad = await app.inject(`/search?q=test&engine=jev&exhaustive=${value}`);
+      expect(bad.statusCode).toBe(400);
+    }
+    await app.close();
+  });
   it("8 streams events for stream=1 while pre-stream errors remain JSON", async () => {
     const envelope = response();
     const app = makeApp({
@@ -114,6 +127,7 @@ describe("Jev REST search boundary", () => {
         query: " 게임  규칙 ",
         root_node_id: "10000000-0000-4000-8000-000000000001",
         limit: 3,
+        exhaustive: false,
         context: { agent: "roselin", project: "atom", task: undefined },
       },
       aborted: false,

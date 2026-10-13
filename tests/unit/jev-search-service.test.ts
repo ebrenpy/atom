@@ -176,13 +176,15 @@ describe("Jev search traversal and trace", () => {
 
     expect(calls).toEqual([
       { nodeId: null, depth: 2, excerptChars: 200 },
+      { nodeId: aliasId, depth: 1, excerptChars: 0 },
+      { nodeId: aliasAgainId, depth: 1, excerptChars: 0 },
       { nodeId: aliasId, depth: 2, excerptChars: 200 },
     ]);
     expect(aliasedOccurrence).toBeDefined();
     expect(discoveredOccurrence?.canonical_node_id).toBeNull();
     expect(aliasedOccurrence?.canonical_node_id).toBeNull();
     expect(response.trace.steps.flatMap((step) => step.decisions).find((decision) => decision.ref === aliasedOccurrence?.ref)).toMatchObject({ action: "alias", reused_from_ref: expect.any(String) });
-    expect(summaryStep).toBeUndefined();
+    expect(summaryStep?.canonical_node_id).toBe(canonicalId);
     expect(expansionStep?.canonical_node_id).toBe(canonicalId);
     expect(child).toMatchObject({ physical_parent_node_id: canonicalId, traversal_parent_ref: expect.any(String) });
     expect(child?.traversal_parent_ref).not.toBeNull();

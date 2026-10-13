@@ -68,9 +68,12 @@ export class JevSearchRequestError extends Error {
 export function normalizeJevSearchInput(
   raw: JevSearchInput,
   policy: JevSearchPolicy,
-): JevSearchInput & { query: string; root_node_id: string | null; limit: number; context: JevSearchContext } {
+): JevSearchInput & { query: string; root_node_id: string | null; limit: number; context: JevSearchContext; exhaustive: boolean } {
   if (!raw || typeof raw.query !== "string") throw new JevSearchRequestError("A search query is required.", "JEV_QUERY_REQUIRED", 400);
   const query = normalizeQuery(raw.query);
+  if (raw.exhaustive !== undefined && typeof raw.exhaustive !== "boolean") {
+    throw new JevSearchRequestError("Jev exhaustive must be a boolean.", "JEV_EXHAUSTIVE_INVALID", 400);
+  }
   if (query.length < 1 || query.length > 400) throw new JevSearchRequestError("Jev query must be between 1 and 400 characters.", "JEV_QUERY_INVALID", 400);
   const rootNodeId = raw.root_node_id ?? null;
   if (rootNodeId !== null && (typeof rootNodeId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rootNodeId))) {
@@ -81,7 +84,7 @@ export function normalizeJevSearchInput(
     throw new JevSearchRequestError(`Jev limit must be between 1 and ${String(policy.maxResults)}.`, "JEV_LIMIT_INVALID", 400);
   }
   try {
-    return { ...raw, query, root_node_id: rootNodeId, limit, context: normalizeContext(raw.context) };
+    return { ...raw, query, root_node_id: rootNodeId, limit, context: normalizeContext(raw.context), exhaustive: raw.exhaustive ?? false };
   } catch {
     throw new JevSearchRequestError("Jev context fields must be text with at most 160 characters.", "JEV_CONTEXT_INVALID", 400);
   }

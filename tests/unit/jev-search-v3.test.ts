@@ -12,12 +12,13 @@ function seed(n: TreeNodeWithCard): SearchResult {
 function fixture(seeds: TreeNodeWithCard[], children: Record<string, TreeNodeWithCard[]>, score: (stage: string, cardId: string, ids: string[]) => number) {
   const nodes = new Map([...seeds, ...Object.values(children).flat()].map(n => [n.id, n]));
   const judged: Array<{ stage: string; ids: string[] }> = [];
+  const reads: Array<{ id: string | null; depth: number }> = [];
   const deps: JevSearchDependencies = {
     searchCards: async () => seeds.map(seed),
     getNode: async id => nodes.get(id) ?? null,
-    getTreeOutline: async (id, depth) => ({ node_id: id, canonical_node_id: id, depth,
+    getTreeOutline: async (id, depth) => { reads.push({ id, depth }); return { node_id: id, canonical_node_id: id, depth,
       nodes: (children[id ?? "ROOT"] ?? []).map(n => ({ id: n.id, card_id: n.card_id, parent_node_id: n.parent_node_id, position: 0, is_symlink: false,
-        title: n.card.title, card_type: n.card.card_type, excerpt: n.card.content, child_count: 0, descendant_count: 0, children: [] } as TreeOutlineNode)) }),
+        title: n.card.title, card_type: n.card.card_type, excerpt: n.card.content, child_count: (children[n.id] ?? []).length, descendant_count: (children[n.id] ?? []).length, children: [] } as TreeOutlineNode)) }; },
     judge: async payload => {
       const state = JSON.parse(payload.state), ids = state.candidates.map((c: { card_id: string }) => c.card_id);
       judged.push({ stage: state.stage, ids });
@@ -25,47 +26,52 @@ function fixture(seeds: TreeNodeWithCard[], children: Record<string, TreeNodeWit
         [key, { type: "noul", noul: score(state.stage, ids[index] ?? "", ids) }])) };
     },
   };
-  return { deps, judged };
+  return { deps, judged, reads };
 }
 const group = (parent: string, type: "structure" | "knowledge", count: number) => Array.from({ length: count }, (_, i) => node(`${parent}-${i}`, type, parent));
 
-describe("Jev document revision 3", () => {
-  it("10 discovers large content collections but scores the cheap path first", async () => {
+describe("Jev document revisions 3 and 5", () => {
+  it("14 defers large structures before reading children and scores the cheap path first", async () => {
     const large = node("large", "structure"), cheap = node("cheap", "structure");
     const f = fixture([large, cheap], { large: group("large", "knowledge", 97), cheap: [node("target", "knowledge", "cheap")] },
       stage => stage === "sufficiency_noul" ? 0.7 : 0.9);
     const r = await searchWithJev({ query: "가짜 질의" }, f.deps);
     expect(r.results.map(c => c.card_id)).toEqual(["target"]);
-    expect(r.trace.candidates.filter(c => c.card_type === "knowledge")).toHaveLength(98);
-    const read = r.trace.steps.find(s => s.purpose === "candidate_discovery" && s.parent_ref === r.trace.candidates.find(c => c.card_id === "large")?.ref);
-    expect(read).toMatchObject({ deferred_kinds: ["content"] });
+    expect(r.trace.candidates.filter(c => c.card_type === "knowledge")).toHaveLength(1);
+    const largeCandidate = r.trace.candidates.find(c => c.card_id === "large");
+    expect(largeCandidate).toMatchObject({ child_count: 97 });
+    expect(r.trace.steps.find(s => s.stage === "structure_noul")).toMatchObject({ deferred_refs: [largeCandidate?.ref] });
+    expect(f.reads.some(read => read.id === "large" && read.depth === 2)).toBe(false);
     expect(f.judged.filter(j => j.stage === "content_noul").flatMap(j => j.ids)).toEqual(["target"]);
     expect(r.trace.steps.some(s => String(s.stage) === "deferred_scan")).toBe(false);
   });
 
-  it("10 defers the oversized side alone and judges the other side in the same hop", async () => {
-    const large = node("large", "structure");
-    const f = fixture([large], { large: [...group("large", "structure", 97), node("target", "knowledge", "large")] },
+  it("14 defers root-opened structures without discovering their children", async () => {
+    const large = node("large", "structure"), cheap = node("cheap", "structure");
+    const f = fixture([], { ROOT: [large, cheap], large: group("large", "structure", 97), cheap: [node("target", "knowledge", "cheap")] },
       stage => stage === "sufficiency_noul" ? 0.7 : 0.9);
     const r = await searchWithJev({ query: "가짜 질의" }, f.deps);
     expect(r.results.map(c => c.card_id)).toEqual(["target"]);
-    expect(r.trace.steps.find(s => s.purpose === "candidate_discovery")).toMatchObject({ deferred_kinds: ["structure"] });
-    expect(f.judged.filter(j => j.stage === "structure_noul").flatMap(j => j.ids)).toEqual(["large"]);
+    expect(r.trace.candidates.map(c => c.card_id)).toEqual(["large", "cheap", "target"]);
+    const root = r.trace.steps.find(s => s.purpose === "candidate_discovery");
+    expect(root).toMatchObject({ deferred_refs: [r.trace.candidates[0].ref] });
+    expect(f.reads.some(read => read.id === "large" && read.depth === 2)).toBe(false);
+    expect(f.judged.filter(j => j.stage === "structure_noul")).toEqual([]);
   });
 
-  it("10 resumes deferred structures whole and keeps exactly 96 candidates in the immediate pool", async () => {
+  it("14 reads all children on resumption and opens exactly 96 children immediately", async () => {
     for (const count of [96, 97]) {
       const large = node("large", "structure");
       const f = fixture([large], { large: group("large", "structure", count) }, (_stage, id) => id === "large" ? 0.9 : 0.1);
       const r = await searchWithJev({ query: "가짜 질의" }, f.deps);
       const scans = r.trace.steps.filter(s => String(s.stage) === "deferred_scan");
       expect(scans).toHaveLength(count === 97 ? 1 : 0);
-      if (scans.length) expect(scans[0].candidate_refs).toHaveLength(97);
+      if (scans.length) expect(scans[0].candidate_refs).toEqual([r.trace.candidates[0].ref]);
       expect(f.judged.filter(j => j.stage === "structure_noul").flatMap(j => j.ids)).toHaveLength(count + 1);
     }
   });
 
-  it("10 resumes whole deferred groups before widening, by hit, gate score and discovery order", async () => {
+  it("14 resumes deferred structures before widening, by hit, gate score and discovery order", async () => {
     const h = node("hit-parent", "structure"), b = node("high-first", "structure"), c = node("low", "structure"), d = node("high-second", "structure");
     const hit = node("hit", "knowledge", h.id);
     const f = fixture([b, c, d, hit], { ROOT: [h], [h.id]: [hit, ...group(h.id, "knowledge", 97)],
@@ -75,11 +81,28 @@ describe("Jev document revision 3", () => {
     const scans = r.trace.steps.filter(s => String(s.stage) === "deferred_scan");
     const byRef = new Map(r.trace.candidates.map(c => [c.ref, c.card_id]));
     expect(scans.map(s => byRef.get(s.parent_ref ?? ""))).toEqual([h.id, b.id, d.id, c.id]);
-    expect(scans.every(s => s.candidate_refs.length === 97)).toBe(true);
+    expect(scans.every(s => s.candidate_refs.length === 1 && s.candidate_refs[0] === s.parent_ref)).toBe(true);
+    const hitParent = r.trace.candidates.find(c => c.card_id === h.id);
+    expect(hitParent).toMatchObject({ child_count: 98 });
+    expect(r.trace.steps.find(s => s.stage === "hit_parent")).toMatchObject({ deferred_refs: [hitParent?.ref] });
+    expect(r.trace.steps.every(s => !("deferred_kinds" in s))).toBe(true);
     const widen = r.trace.steps.find(s => s.stage === "widen");
     expect(widen?.seq).toBeGreaterThan(scans.at(-1)?.seq ?? Infinity);
     expect(f.judged.filter(j => j.stage === "content_noul").flatMap(j => j.ids)).toHaveLength(389);
     expect(r).toMatchObject({ status: "complete", stop_reason: "exhausted", policy: { max_jev_calls: 32, defer_candidates: 96 } });
+  });
+
+  it("15 records sufficiency but continues exhaustive runs to exhaustion", async () => {
+    const h = node("parent", "structure"), hit = node("hit", "knowledge", h.id), added = node("added", "knowledge", h.id);
+    const f = fixture([hit], { ROOT: [h], [h.id]: [hit, added] }, () => 0.9);
+    const events: any[] = [];
+    const input = { query: "가짜 질의", exhaustive: true };
+    const r = await searchWithJev(input, f.deps, undefined, e => events.push(e));
+    expect(r).toMatchObject({ exhaustive: true, status: "complete", stop_reason: "exhausted" });
+    expect(events[0]).toMatchObject({ event: "run", data: { exhaustive: true } });
+    expect(r.results.map(c => c.card_id)).toEqual([hit.id, added.id]);
+    expect(f.judged.filter(j => j.stage === "sufficiency_noul")).toHaveLength(2);
+    expect(r.trace.steps.filter(s => s.stage === "sufficiency_noul").every(s => s.sufficiency_score === 0.9)).toBe(true);
   });
 
   it("12 reasks sufficiency for a changed selected bundle, and skips an unchanged bundle", async () => {

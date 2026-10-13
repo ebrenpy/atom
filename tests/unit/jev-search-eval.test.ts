@@ -34,7 +34,7 @@ describe("Jev evaluation metrics", () => {
     };
     expect(await requestSearch({ url: "https://example.invalid/mcp", apiKey: "test-key", query: "게임", id: 1 }, fakeFetch)).toEqual(result);
     expect(calls).toHaveLength(1);
-    expect(JSON.parse(calls[0].body)).toMatchObject({ method: "tools/call", params: { name: "search_cards", arguments: { engine: "jev", query: "게임" } } });
+    expect(JSON.parse(calls[0].body)).toMatchObject({ method: "tools/call", params: { name: "search_cards", arguments: { engine: "jev", query: "게임", include_trace: true } } });
     expect(calls[0].headers["x-api-key"]).toBe("test-key");
   });
 });

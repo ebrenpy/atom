@@ -19,6 +19,7 @@ const jevResponse = {
   run_id: "run-1",
   query: "질의",
   root_node_id: null,
+  exhaustive: false,
   status: "complete",
   complete: true,
   stop_reason: "exhausted",
@@ -46,6 +47,14 @@ function captureTool(dependencies: SearchToolDependencies) {
 }
 
 describe("search_cards Jev opt-in", () => {
+  it("16 omits trace by default and returns the complete run summary", async () => {
+    const handler = captureTool({ searchCards: async () => [bm25Result], runJev: async () => jevResponse });
+    const reply = await handler({ query: "질의", engine: "jev" }, {}) as { content: Array<{ text: string }> };
+    const compact = JSON.parse(reply.content[0].text);
+    expect(compact).not.toHaveProperty("trace");
+    expect(compact.summary).toEqual({ jev_calls: 0, input_tokens: 0, elapsed_ms: 1000, hops: 0, candidates: 0 });
+    expect(compact.results).toEqual(jevResponse.results);
+  });
   it("leaves the default BM25 result array intact", async () => {
     const handler = captureTool({ searchCards: async () => [bm25Result], runJev: async () => jevResponse });
     const response = await handler({ query: "질의" }, {});
@@ -60,17 +69,17 @@ describe("search_cards Jev opt-in", () => {
       searchCards: async () => [bm25Result],
       runJev: async (input, signal) => { calls.push({ input, signal }); return jevResponse; },
     });
-    const result = await handler({ query: "질의", engine: "jev", limit: 3, root_node_id: "10000000-0000-4000-8000-000000000001", context: { agent: "roselin", project: "atom" } }, { signal: controller.signal });
+    const result = await handler({ query: "질의", engine: "jev", exhaustive: true, include_trace: true, limit: 3, root_node_id: "10000000-0000-4000-8000-000000000001", context: { agent: "roselin", project: "atom" } }, { signal: controller.signal });
 
-    expect(calls).toEqual([{
-      input: {
+    expect(calls).toHaveLength(1);
+    expect(calls[0].input).toEqual({
         query: "질의",
         root_node_id: "10000000-0000-4000-8000-000000000001",
         limit: 3,
+        exhaustive: true,
         context: { agent: "roselin", project: "atom", task: undefined },
-      },
-      signal: controller.signal,
-    }]);
+    });
+    expect(calls[0].signal).toBe(controller.signal);
     expect(result).toEqual({ content: [{ type: "text", text: JSON.stringify(jevResponse) }] });
   });
 

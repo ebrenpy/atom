@@ -47,7 +47,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
   let widened = false;
   let emittedRun = false;
 
-  const judgePayload = async (stage: "structure_noul" | "content_noul" | "sufficiency_noul", batch: SearchCandidate[], payload: JevMeaningPayload): Promise<number[] | null> => {
+  const judgePayload = async (stage: "structure_noul" | "content_noul" | "sufficiency_noul", batch: SearchCandidate[], payload: JevMeaningPayload): Promise<{ scores: number[]; frontier: SearchCandidate[] } | null> => {
     if (stopped()) return null;
     if (run.jevCalls >= policy.maxJevCalls) { run.limitCode = "CALL_BUDGET"; return null; }
     run.jevCalls += 1;
@@ -62,15 +62,20 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
       }
       const keys = stage === "sufficiency_noul" ? ["sufficiency_0"] : batch.map((_c, i) => `${stage === "structure_noul" ? "structure" : "content"}_${i}`);
       const scores = keys.map(key => noul(response as JevMeaningResponse, key));
+      const frontier: SearchCandidate[] = [];
       if (stage === "sufficiency_noul") {
         step.sufficiency_score = scores[0];
         step.sufficiency_threshold = policy.sufficiencyThreshold;
       } else {
         step.decisions = batch.map((candidate, i) => ({ ref: candidate.ref, question_key: keys[i], score: scores[i],
           action: stage === "content_noul" ? "content_scored" : scores[i] >= policy.structureThreshold ? "queued" : "pruned", reused_from_ref: null }));
+        if (stage === "structure_noul") batch.forEach((candidate, index) => {
+          candidate.structureScore = scores[index];
+          if (scores[index] >= policy.structureThreshold && catalog.open(candidate, step)) frontier.push(candidate);
+        });
       }
       run.finish(step, call, { completedAt: new Date().toISOString(), response });
-      return scores;
+      return { scores, frontier };
     } catch (cause) {
       if (stopped()) { run.finish(step, call, { completedAt: null, disposition: "skipped" }); return null; }
       const failure = safeJevFailure(cause);
@@ -94,7 +99,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
     catalog.content = [];
     let cursor = 0;
     let failure: unknown;
-    const scoresByJob: Array<number[] | null> = [];
+    const scoresByJob: Array<{ scores: number[]; frontier: SearchCandidate[] } | null> = [];
     await Promise.all(Array.from({ length: Math.min(policy.maxParallelJevCalls, jobs.length) }, async () => {
       while (cursor < jobs.length && !stopped() && !run.limitCode && !failure) {
         const index = cursor++;
@@ -105,16 +110,12 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
     }));
     const frontier: SearchCandidate[] = catalog.rootFrontier.splice(0), hits: SearchCandidate[] = [];
     jobs.forEach((job, index) => {
-      const scores = scoresByJob[index];
-      if (!scores) return;
+      const result = scoresByJob[index];
+      if (!result) return;
+      const scores = result.scores;
+      frontier.push(...result.frontier);
       job.batch.forEach((candidate, i) => {
-        if (job.stage === "structure_noul") {
-          candidate.structureScore = scores[i];
-          if (scores[i] >= policy.structureThreshold && !catalog.opened.has(candidate.cardId)) {
-            catalog.opened.add(candidate.cardId);
-            frontier.push(candidate);
-          }
-        } else {
+        if (job.stage === "content_noul") {
           scored.push({ candidate, score: scores[i] });
           if (scores[i] >= policy.structureThreshold) hits.push(candidate);
         }
@@ -134,7 +135,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
     lastSufficientRefs = refs;
     const candidates = selected.map(item => item.candidate);
     const scores = await judgePayload("sufficiency_noul", candidates, buildSufficiencyPayload(input.query, input.context, candidates));
-    return scores !== null && scores[0] >= policy.sufficiencyThreshold;
+    return scores !== null && scores.scores[0] >= policy.sufficiencyThreshold;
   };
 
   try {
@@ -150,13 +151,13 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
       }
     }
     observer?.({ event: "run", data: { schema_version: 2, engine: "jev", run_id: run.runId, query: input.query,
-      root_node_id: input.root_node_id, started_at: startedAt, policy: policyView(policy) } });
+      root_node_id: input.root_node_id, exhaustive: input.exhaustive, started_at: startedAt, policy: policyView(policy) } });
     emittedRun = true;
     let frontier: SearchCandidate[] = [], hits: SearchCandidate[] = [];
     if (!stopped()) {
       await catalog.lexicalSeeds(input.query);
       if (!run.limitCode && !stopped()) ({ frontier, hits } = await judgeHop());
-      if (await sufficient()) stopReason = "sufficient";
+      if (await sufficient() && !input.exhaustive) stopReason = "sufficient";
     }
     run.hop = 1;
     while (!stopReason && !stopped() && !run.limitCode) {
@@ -166,18 +167,21 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
       const parents = commitParents();
       commitOutlines();
       if (stopped() || run.limitCode) break;
-      if (frontier.length === 0 && parents.length === 0 && !catalog.resumeDeferred()) {
-        if (widened) { stopReason = "exhausted"; break; }
-        widened = true;
-        const step = run.start("widen");
-        step.widen_reason = run.hop === 1 ? "no_entry" : "frontier_empty";
-        run.finish(step);
-        (await catalog.prepareOutlines([null]))();
+      if (frontier.length === 0 && parents.length === 0) {
+        const deferred = catalog.takeDeferred();
+        if (deferred) (await catalog.prepareOutlines([deferred]))();
+        else {
+          if (widened) { stopReason = "exhausted"; break; }
+          widened = true;
+          const step = run.start("widen");
+          step.widen_reason = run.hop === 1 ? "no_entry" : "frontier_empty";
+          run.finish(step);
+          (await catalog.prepareOutlines([null]))();
+        }
       }
       if (stopped() || run.limitCode) break;
-      await catalog.summarize(catalog.structures.filter(c => c.isSymlink));
       const next = await judgeHop();
-      if (await sufficient()) { stopReason = "sufficient"; break; }
+      if (await sufficient() && !input.exhaustive) { stopReason = "sufficient"; break; }
       frontier = [...next.frontier, ...parents];
       hits = next.hits;
       run.hop += 1;
@@ -218,7 +222,7 @@ export async function searchWithJev(rawInput: JevSearchInput, deps: JevSearchDep
   terminal.stop_reason = stopReason;
   run.finish(terminal);
   const response: JevSearchResponse = {
-    schema_version: 2, engine: "jev", run_id: run.runId, query: input.query, root_node_id: input.root_node_id,
+    schema_version: 2, engine: "jev", run_id: run.runId, query: input.query, root_node_id: input.root_node_id, exhaustive: input.exhaustive,
     status, complete: status === "complete", stop_reason: stopReason, started_at: startedAt, completed_at: completedAt,
     policy: policyView(policy), results,
     trace: { candidates: run.candidates, steps: run.steps, calls: run.calls.sort((a, b) => a.seq - b.seq) }, error,

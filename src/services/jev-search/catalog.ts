@@ -11,6 +11,7 @@ export interface JevTraversalCandidate extends JevPromptCandidate {
   pathNodeIds: string[];
   traversalDepth: number;
   traversalParentRef: string | null;
+  childCount: number | null;
   childSummary?: JevChildSummary | null;
 }
 
@@ -34,6 +35,7 @@ export function candidateFromOutline(
     traversalDepth,
     physicalParentNodeId: node.parent_node_id,
     traversalParentRef,
+    childCount: node.card_type === "structure" && !node.is_symlink ? node.child_count : null,
     ...(node.card_type === "structure" ? { childSummary: childSummaryFromOutline(node) } : {}),
   };
 }
@@ -79,6 +81,7 @@ export function toOccurrence(
     traversal_parent_ref: candidate.traversalParentRef,
     canonical_node_id: candidate.isSymlink ? null : candidate.nodeId,
     discovered_in_step_id: discoveredInStepId,
+    child_count: candidate.childCount,
     hop: 0,
     origin: "outline",
     hit_ref: null,
@@ -105,6 +108,7 @@ export function candidateFromNode(node: TreeNodeWithCard, ancestors: TreeNodeWit
     isSymlink: node.is_symlink, summary: safeSummary(toOutlineExcerpt(node.card.content === null ? null : Array.from(node.card.content).slice(0, EXCERPT_SOURCE_CHARS).join(""), 200)),
     path: [...path.map(safeTitle), safeTitle(node.card.title)], pathNodeIds: [...ancestors.map(n => n.id), node.id],
     traversalDepth: ancestors.length, physicalParentNodeId: node.parent_node_id, traversalParentRef: null,
+    childCount: null,
   };
 }
 

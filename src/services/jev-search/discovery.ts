@@ -14,12 +14,6 @@ export interface SearchCandidate extends JevTraversalCandidate {
   openedByHit?: boolean;
 }
 
-interface DeferredGroup {
-  parent: SearchCandidate | null;
-  kind: "structure" | "content";
-  candidates: SearchCandidate[];
-}
-
 interface SummaryRead {
   step: JevSearchStep;
   call: AuditCallInput;
@@ -30,7 +24,7 @@ interface SummaryRead {
 export class JevSearchCatalog {
   readonly firstByCard = new Map<string, SearchCandidate>();
   readonly opened = new Set<string>();
-  readonly deferred: DeferredGroup[] = [];
+  readonly deferred: SearchCandidate[] = [];
   readonly rootFrontier: SearchCandidate[] = [];
   structures: SearchCandidate[] = [];
   content: SearchCandidate[] = [];
@@ -98,6 +92,7 @@ export class JevSearchCatalog {
       const found = values.map(value => {
         if (this.run.stopped() || this.run.limitCode || value.status === "rejected" || !value.value) return null;
         const seed = value.value;
+        this.applySummaryMetadata(seed.candidate, summaryResults[seed.rank - 1]);
         return this.register(seed.candidate, step, "lexical_seed", { lexical_rank: seed.rank, match_snippet: seed.snippet });
       });
       const failed = values.some(value => value.status === "rejected");
@@ -127,32 +122,36 @@ export class JevSearchCatalog {
     const reads = eligible.map(hit => {
       const step = this.run.start("hit_parent", [hit.ref]);
       const call = this.run.beginCall(step, "hit_parent", 1, { node_id: hit.physicalParentNodeId, hit_ref: hit.ref });
-      return { hit, step, call, read: this.deps.getNode(hit.physicalParentNodeId as string) };
+      const summary = this.prepareSummary(hit.physicalParentNodeId as string);
+      return { hit, step, call, summary, read: this.deps.getNode(hit.physicalParentNodeId as string) };
     });
-    const values = await Promise.allSettled(reads.map(async r => {
+    const [values, summaries] = await Promise.all([Promise.allSettled(reads.map(async r => {
       const node = await r.read;
       const ancestors = node ? await this.ancestors(node) : [];
       return node ? candidateFromNode(node, ancestors) : null;
-    }));
+    })), Promise.all(reads.map(r => r.summary.result))]);
     return () => {
     const parents: SearchCandidate[] = [];
     reads.forEach(({ hit, step, call }, index) => {
       const value = values[index];
       if (value.status === "rejected") { this.readFailure(step, call, "ATOM_PARENT_FAILED", "Atom hit parent read failed."); return; }
       const candidate = value.value;
+      if (candidate) this.applySummaryMetadata(candidate, summaries[index]);
+      let parent: SearchCandidate | null = null;
       if (!this.run.stopped() && candidate?.cardType === "structure" && !this.opened.has(candidate.cardId)) {
         // A previously pruned gate can be reopened using the original identity.
-        const parent = this.firstByCard.get(candidate.cardId) ?? this.register(candidate, step, "hit_parent", { hit_ref: hit.ref });
+        parent = this.firstByCard.get(candidate.cardId) ?? this.register(candidate, step, "hit_parent", { hit_ref: hit.ref });
         if (parent) {
+          this.applySummaryMetadata(parent, summaries[index]);
           parent.openedByHit = true;
-          this.opened.add(parent.cardId);
-          parents.push(parent);
           if (!step.candidate_refs.includes(parent.ref)) step.candidate_refs.push(parent.ref);
           step.decisions.push({ ref: parent.ref, question_key: null, score: null, action: "opened_by_hit", reused_from_ref: null });
+          if (this.open(parent, step)) parents.push(parent);
         }
       }
       this.run.finish(step, call, { completedAt: new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "completed",
         outlineResponse: { node_id: candidate?.nodeId ?? null, candidate_refs: step.candidate_refs } });
+      this.completeSummary(reads[index].summary, summaries[index], parent);
     });
     return parents;
     };
@@ -168,57 +167,73 @@ export class JevSearchCatalog {
       const call = this.run.beginCall(step, "atom_outline", 0, outlineAuditRequest(nodeId, 2, this.policy.summaryChars, step.purpose, step.parent_ref));
       return { parent, step, call, nodeId, read: this.deps.getTreeOutline(nodeId, 2, this.policy.summaryChars) };
     });
-    const values = await Promise.allSettled(reads.map(r => r.read));
+    const values = await Promise.allSettled(reads.map(async read => {
+      const outline = await read.read;
+      const summaries = (outline?.nodes ?? []).map(node => node.card_type === "structure" && node.is_symlink ? this.prepareSummary(node.id) : null);
+      const results = await Promise.all(summaries.map(summary => summary?.result ?? null));
+      return { outline, summaries, results };
+    }));
     return () => { reads.forEach(({ parent, step, call, nodeId }, index) => {
       const value = values[index];
-      if (value.status === "rejected" || !value.value) { this.readFailure(step, call, "ATOM_OUTLINE_FAILED", "Atom tree outline read failed."); return; }
-      const outline = value.value;
+      if (value.status === "rejected" || !value.value.outline) { this.readFailure(step, call, "ATOM_OUTLINE_FAILED", "Atom tree outline read failed."); return; }
+      const { outline, summaries, results } = value.value;
       step.canonical_node_id = outline.canonical_node_id;
-      const structureStart = this.structures.length, contentStart = this.content.length;
+      const foundCandidates: Array<SearchCandidate | null> = [];
+      let ordinal = 0;
       if (!this.run.stopped()) for (const node of outline.nodes) {
         if (this.run.limitCode) break;
         const candidate = candidateFromOutline(node, parent?.path ?? this.rootPath, parent?.pathNodeIds ?? this.rootPathNodeIds,
           parent?.ref ?? null, parent ? parent.traversalDepth + 1 : 0);
+        this.applySummaryMetadata(candidate, results[ordinal]);
         const found = this.register(candidate, step, "outline");
+        foundCandidates[ordinal++] = found;
         if (nodeId === null && candidate.cardType === "structure") {
           if (found) this.structures.pop();
           const root = found ?? this.firstByCard.get(candidate.cardId);
           if (root && !this.opened.has(root.cardId)) {
-            this.opened.add(root.cardId);
             delete root.structureScore;
-            this.rootFrontier.push(root);
             if (!step.candidate_refs.includes(root.ref)) step.candidate_refs.push(root.ref);
             step.decisions.push({ ref: root.ref, question_key: null, score: null, action: "opened_root", reused_from_ref: null });
+            if (this.open(root, step)) this.rootFrontier.push(root);
           }
-        }
-      }
-      for (const [kind, pool, start] of [["structure", this.structures, structureStart], ["content", this.content, contentStart]] as const) {
-        if (pool.length - start > this.policy.deferCandidates) {
-          this.deferred.push({ parent, kind, candidates: pool.splice(start) });
-          (step.deferred_kinds ??= []).push(kind);
         }
       }
       this.run.finish(step, call, { completedAt: new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "completed",
         outlineResponse: { canonical_node_id: outline.canonical_node_id, node_count: outline.nodes.length, candidate_refs: step.candidate_refs } });
+      summaries.forEach((summary, index) => {
+        if (summary && results[index]) this.completeSummary(summary, results[index], foundCandidates[index] ?? null);
+      });
     }); };
   }
 
-  async summarize(candidates: SearchCandidate[]): Promise<void> {
-    const reads = candidates.map(candidate => this.prepareSummary(candidate.nodeId, candidate.ref));
-    await Promise.all(reads.map(async (read, index) => this.completeSummary(read, await read.result, candidates[index])));
+  open(candidate: SearchCandidate, step: JevSearchStep): boolean {
+    if (this.opened.has(candidate.cardId)) return false;
+    this.opened.add(candidate.cardId);
+    if (candidate.childCount !== null && candidate.childCount > this.policy.deferCandidates) {
+      this.deferred.push(candidate);
+      (step.deferred_refs ??= []).push(candidate.ref);
+      return false;
+    }
+    return true;
   }
 
-  resumeDeferred(): boolean {
-    this.deferred.sort((left, right) => Number(right.parent?.openedByHit ?? false) - Number(left.parent?.openedByHit ?? false)
-      || (right.parent?.structureScore ?? 0) - (left.parent?.structureScore ?? 0)
-      || left.candidates[0].discoveryOrder - right.candidates[0].discoveryOrder);
-    const group = this.deferred.shift();
-    if (!group) return false;
-    const step = this.run.start("deferred_scan", group.candidates.map(c => c.ref));
-    step.parent_ref = group.parent?.ref ?? null;
-    (group.kind === "structure" ? this.structures : this.content).push(...group.candidates);
+  takeDeferred(): SearchCandidate | null {
+    this.deferred.sort((left, right) => Number(right.openedByHit ?? false) - Number(left.openedByHit ?? false)
+      || (right.structureScore ?? 0) - (left.structureScore ?? 0)
+      || left.discoveryOrder - right.discoveryOrder);
+    const candidate = this.deferred.shift();
+    if (!candidate) return null;
+    const step = this.run.start("deferred_scan", [candidate.ref]);
+    step.parent_ref = candidate.ref;
     this.run.finish(step);
-    return true;
+    return candidate;
+  }
+
+  private applySummaryMetadata(candidate: JevTraversalCandidate, result: PromiseSettledResult<TreeOutline | null> | null | undefined): void {
+    if (candidate.cardType === "structure" && result?.status === "fulfilled" && result.value) {
+      candidate.childCount = result.value.nodes.length;
+      candidate.childSummary = childSummaryFromSymlinkOutline(result.value.nodes);
+    }
   }
 
   private prepareSummary(nodeId: string, ref?: string): SummaryRead {
