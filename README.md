@@ -96,7 +96,7 @@ Deleting a card cascades all its nodes. Deleting a node preserves the card.
 | `create_symlink` | Place a card at another tree location |
 | `move_node` | Relocate a node to a new parent/position |
 | `delete_node` | Remove node only (card preserved, children cascade) |
-| `search_cards` | BM25 full-text search with snippets; scope by `rootNodeId` |
+| `search_cards` | BM25 full-text search with snippets; scope by `rootNodeId`; opt into Jev with `engine: "jev"` |
 | `batch_op` | Atomic multi-operation transaction (creates/updates/moves/deletes/symlinks) |
 
 ### batch_op
@@ -164,11 +164,24 @@ npm run mcp:dev    # tsx watch
 | POST | `/tree/symlink` | Create symlink |
 | PUT | `/tree/:nodeId/move` | Move node |
 | DELETE | `/tree/:nodeId` | Delete node (card preserved) |
-| GET | `/search?q=` | BM25 full-text search (`?rootNodeId=` for scoped search) |
+| GET | `/search?q=` | BM25 full-text search (`?rootNodeId=` for scoped search); opt into Jev with `?engine=jev` |
 | POST | `/api/cards` | Create card via agent key auth |
 | POST | `/mcp` | Streamable HTTP MCP endpoint |
 | POST | `/batch` | Batch operation (atomic transaction) |
 | GET | `/events` | SSE real-time event stream |
+
+### Jev search
+
+Jev is opt-in. `/search` without `engine` and MCP `search_cards` without `engine` keep the existing BM25 result array. Set `engine=jev` to receive a trace-bearing response envelope.
+
+- Inputs: `query`/`q`, optional structure `root_node_id` (REST also accepts `rootNodeId`), `limit` from 1 to 6, and optional `context_agent`, `context_project`, and `context_task` (MCP `context` object).
+- Jev does not accept BM25 filters such as tags, card type, date range, source type, or strategy.
+- The schema version 2 response contains `status`, `complete`, `stop_reason` (`sufficient` or `exhausted` on completion), selected `results`, and `trace` with candidate occurrences, steps, and safe audit calls. `limited` means the time, candidate, or Jev call ceiling stopped traversal; `complete` is false and results come only from cards already scored.
+- Server configuration uses `TYPESAFE_API_KEY` and `TYPESAFE_BASE_URL`. Jev uses `jev-latest`, v3 prompts, at most 48 candidates and 60,000 serialized characters per judgment, at most 20,000 candidate occurrences and 45 seconds per run, and at most two concurrent runs per process.
+- Selection uses the adopted 0.50 structure gate, 0.30 score floor, 0.10 relative-score window, and six-result maximum. The requested result limit can lower that maximum.
+- Queries start with up to 12 distinct words joined with OR, taking 24 lexical seeds. Each hop judges structures and content with at most three concurrent Jev calls. Knowledge hits at 0.50 open their parent without a gate. A sufficiency score of 0.70 stops the search; an empty frontier widens to the roots once. Each run sends at most 24 Jev calls.
+- REST `GET /search?q=…&engine=jev&stream=1` streams `run`, `step_started`, `step_completed`, and `done` as SSE. Use a credentialed fetch body stream. Completed steps include newly discovered candidates and the same full safe audit call as the JSON response. `seq` orders starts; replay completions by `completed_at`, then `seq`. Pre-stream errors remain JSON. Disconnecting cancels the run. MCP returns the complete JSON response only.
+- To evaluate a query set, run `node scripts/jev-search-eval.mjs path/to/queryset.json` with `ATOM_MCP_URL` and `ATOM_API_KEY` supplied by the environment. Items accept `id`, `category`, `query`, `targets`, and optional `expect` (`hit`, `some`, or `none`). Each query runs once, sequentially. JSON lines report target selection/scores, result count/highest score, calls, input tokens, elapsed time, status, stop reason, and hops; the final summary groups matches by category and reports median/max call counts and time. Bodies, excerpts, and key values are never printed.
 
 ### Tree outline
 
