@@ -990,7 +990,9 @@
     const alive = v.alive; const dim = v.dim; const isRoot = n.type === "root";
     const target = v.next || v.t; const distance = Math.hypot(v.x - target.x, v.y - target.y);
     const labelDistance = Math.min(6, (M.lowPitch - M.rowH) / 2);
-    const label = text && distance <= labelDistance; const labelAlpha = label ? 1 - distance / M.rowH : 0;
+    // 더미로 접혀 사라지는 후보는 한 자리에 모이므로 글을 그리지 않는다
+    const near = target.a > 0 && distance <= labelDistance;
+    const label = text && near; const labelAlpha = label ? 1 - distance / M.rowH : 0;
     const va = v.a; v.a = va * (1 - 0.8 * clamp((Math.abs(v.y - v.t.y) - 6) / 80, 0, 1));
     if (v.a < 0.03) { v.a = va; return; }
     ctx.globalAlpha = v.a;
@@ -1068,7 +1070,7 @@
       ctx.globalAlpha = v.a; ctx.font = font(600, 13); const label = "안 본 " + put; const cw = ctx.measureText(label).width + 34; const cx = x + 10; const cyy = y + h + 3; const ch = M.chipH - 4;
       for (let i = 1; i >= 0; i -= 1) { rr(cx + 6 + i * 3, cyy + 4 - i * 2, 11, ch - 8, 2); ctx.fillStyle = css(T.node); ctx.fill(); ctx.strokeStyle = css(T.ink2); ctx.lineWidth = 1; ctx.stroke(); }
       rr(cx + 0.5, cyy + 0.5, cw - 1, ch - 1, 6); ctx.strokeStyle = css(T.ink2, 0.7); ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
-      if (distance <= labelDistance) { ctx.globalAlpha *= labelAlpha; ctx.fillStyle = css(T.ink2); ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, cx + 26, cyy + ch / 2 + 0.5); }
+      if (near) { ctx.globalAlpha *= labelAlpha; ctx.fillStyle = css(T.ink2); ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, cx + 26, cyy + ch / 2 + 0.5); }
     }
     // 가리킨 후보
     if (view.hover === n.ref) { ctx.globalAlpha = v.a * 0.55; ctx.strokeStyle = css(T.ink); ctx.lineWidth = 1.4; rr(x - 1.5, y - 1.5, w + 3, h + 3, 6.5); ctx.stroke(); }
