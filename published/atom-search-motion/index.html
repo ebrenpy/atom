@@ -619,9 +619,9 @@
         v = { ref: n.ref, x: o.x, y: o.y, vx: 0, vy: 0, a: 0, alive: 0, dim: 0, sel: 0, judge: 0, scoreA: 0, port: 0, read: 0, wipe: 1, flash: 0, born: now + (animate ? spawnDelay(n, addedAt.get(n.ref) || 0) : 0), t: tg, next: null, hold: 0, selAt: 0, fit: null };
         view.nodes.set(n.ref, v);
       } else if (animate && scoredAt.has(n.ref)) { v.next = tg; v.hold = now + Math.min(240, scoredAt.get(n.ref) * 12); }
-      else if (v.next && now < v.hold) v.next = tg;
+      else if (v.next) v.next = tg;
       else v.t = tg;
-      if (!animate) snapNode(v);
+      if (!animate) { v.t = tg; v.next = null; snapNode(v); }
     }
     for (const ref of [...view.nodes.keys()]) { const n = model.nodes.get(ref); if (!n) view.nodes.delete(ref); }
     // 더미
@@ -791,14 +791,18 @@
     moveCamera(right - left > vw ? Math.min(right - vw, colX(Math.max(...hops)) - 16) : clamp(cam.tx, right - vw, left), -M.padTop, cam.tz, instant);
   }
   function zoomTo(z, px = W / 2, py = H / 2) {
-    z = clamp(z, 0.4, 1.6);
+    z = clamp(z, minZoom(), 1.6);
     const wx = px / cam.z + cam.x; const wy = (py - M.headerH) / cam.z + cam.y;
     setFollow(false);
     moveCamera(wx - px / z, wy - (py - M.headerH) / z, z);
   }
-  function fitAll() {
+  function fitZoom() {
     const L = view.L; const w = L.width + 2 * M.padX + badgeRoom(); const h = L.height + M.padTop + 44;
-    const z = clamp(Math.min(W / w, (H - M.headerH) / h), 0.4, 1);
+    return Math.min(W / w, (H - M.headerH) / h, 1);
+  }
+  const minZoom = () => Math.min(0.4, fitZoom());
+  function fitAll() {
+    const w = view.L.width + 2 * M.padX + badgeRoom(); const z = fitZoom();
     setFollow(false);
     moveCamera(-M.padX - Math.max(0, (W / z - w) / 2), -M.padTop, z);
   }
@@ -984,6 +988,9 @@
     if (!v || now < v.born || v.a < 0.03 || v.x > x1 || v.x < x0 || v.y < y0 || v.y > y1) return;
     const x = v.x; const y = v.y; const w = M.colW; const h = M.rowH; const [line, fill] = typeOf(n);
     const alive = v.alive; const dim = v.dim; const isRoot = n.type === "root";
+    const target = v.next || v.t; const distance = Math.hypot(v.x - target.x, v.y - target.y);
+    const labelDistance = Math.min(6, (M.lowPitch - M.rowH) / 2);
+    const label = text && distance <= labelDistance; const labelAlpha = label ? 1 - distance / M.rowH : 0;
     const va = v.a; v.a = va * (1 - 0.8 * clamp((Math.abs(v.y - v.t.y) - 6) / 80, 0, 1));
     if (v.a < 0.03) { v.a = va; return; }
     ctx.globalAlpha = v.a;
@@ -1004,7 +1011,8 @@
     }
     const tx = x + (n.type === "structure" ? 15 : 12); const cy = y + h / 2 + 0.5;
     const portPad = n.type === "structure" ? 4 : 0;
-    if (text) {
+    if (label) {
+      ctx.globalAlpha = v.a * labelAlpha;
       const bold = alive > 0.5; const f = font(bold ? 650 : 500, 14);
       const scoreW = n.score != null || n.byHit || n.judging ? 36 : 4;
       const key = (bold ? "b" : "r") + scoreW;
@@ -1014,8 +1022,8 @@
       ctx.fillText(v.fit, tx, cy);
       const sx = x + w - 9 - portPad;
       if (n.score != null && v.scoreA > 0.02) {
-        ctx.globalAlpha = v.a * v.scoreA; ctx.font = font(bold ? 600 : 500, 13); ctx.textAlign = "right";
-        ctx.fillStyle = css(mix(T.ink2, T.lowText, dim)); ctx.fillText(n.score.toFixed(2), sx, cy + (1 - v.scoreA) * 5); ctx.globalAlpha = v.a;
+        ctx.globalAlpha = v.a * labelAlpha * v.scoreA; ctx.font = font(bold ? 600 : 500, 13); ctx.textAlign = "right";
+        ctx.fillStyle = css(mix(T.ink2, T.lowText, dim)); ctx.fillText(n.score.toFixed(2), sx, cy + (1 - v.scoreA) * 5); ctx.globalAlpha = v.a * labelAlpha;
       } else if (n.byHit) {
         ctx.strokeStyle = css(T.path); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(sx - 5, cy + 5); ctx.lineTo(sx - 5, cy - 5); ctx.moveTo(sx - 9, cy - 1); ctx.lineTo(sx - 5, cy - 5); ctx.lineTo(sx - 1, cy - 1); ctx.stroke();
       }
@@ -1025,6 +1033,7 @@
       }
       ctx.textAlign = "left";
     }
+    ctx.globalAlpha = v.a;
     // Jev가 보는 중: 주황 테와 지나가는 빛
     if (v.judge > 0.02) {
       ctx.globalAlpha = v.a * v.judge; ctx.strokeStyle = css(T.jev); ctx.lineWidth = 1.6; ctx.setLineDash([7, 5]); ctx.lineDashOffset = playing() ? -(now / 22) % 12 : 0;
@@ -1051,7 +1060,7 @@
     if (v.sel > 0.02 && text) {
       const k = easeOut(v.sel); ctx.globalAlpha = v.a * k; const cx = x + 10; const cyy = y + h + 3 - (1 - k) * 8;
       rr(cx, cyy, 30, M.chipH - 4, 6); ctx.fillStyle = css(T.evidence); ctx.fill();
-      ctx.fillStyle = css(T.evidenceInk); ctx.font = font(700, 13); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(n.rank), cx + 15, cyy + (M.chipH - 4) / 2 + 0.5); ctx.textAlign = "left";
+      if (label) { ctx.globalAlpha *= labelAlpha; ctx.fillStyle = css(T.evidenceInk); ctx.font = font(700, 13); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(n.rank), cx + 15, cyy + (M.chipH - 4) / 2 + 0.5); ctx.textAlign = "left"; }
     }
     // 미뤄 둔 묶음: 구조 아래의 칩. 열 곳이 떨어지면 꺼내 훑는다
     const put = view.L.dorm.get(n.ref);
@@ -1059,7 +1068,7 @@
       ctx.globalAlpha = v.a; ctx.font = font(600, 13); const label = "안 본 " + put; const cw = ctx.measureText(label).width + 34; const cx = x + 10; const cyy = y + h + 3; const ch = M.chipH - 4;
       for (let i = 1; i >= 0; i -= 1) { rr(cx + 6 + i * 3, cyy + 4 - i * 2, 11, ch - 8, 2); ctx.fillStyle = css(T.node); ctx.fill(); ctx.strokeStyle = css(T.ink2); ctx.lineWidth = 1; ctx.stroke(); }
       rr(cx + 0.5, cyy + 0.5, cw - 1, ch - 1, 6); ctx.strokeStyle = css(T.ink2, 0.7); ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = css(T.ink2); ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, cx + 26, cyy + ch / 2 + 0.5);
+      if (distance <= labelDistance) { ctx.globalAlpha *= labelAlpha; ctx.fillStyle = css(T.ink2); ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, cx + 26, cyy + ch / 2 + 0.5); }
     }
     // 가리킨 후보
     if (view.hover === n.ref) { ctx.globalAlpha = v.a * 0.55; ctx.strokeStyle = css(T.ink); ctx.lineWidth = 1.4; rr(x - 1.5, y - 1.5, w + 3, h + 3, 6.5); ctx.stroke(); }
@@ -1339,6 +1348,12 @@
     if (v.score) { const b = document.createElement("b"); b.textContent = v.score; p.append(b); }
     const s = document.createElement("span"); s.textContent = v.word; p.append(s); return p;
   }
+  function sufficiencyEl(sf) {
+    const el = document.createElement("p"); el.className = "pop-verdict " + (sf.ok ? "ok" : "no");
+    const b = document.createElement("b"); b.textContent = sf.score.toFixed(2); const sp = document.createElement("span");
+    sp.textContent = sf.ok ? `찾는 것이 있다 (${sf.threshold.toFixed(2)} 이상)` : `아직 없다 (${sf.threshold.toFixed(2)} 미만)`;
+    el.append(b, sp); return el;
+  }
   function sentEl(sent, label = true) {
     const pre = document.createElement("div"); pre.className = "sent";
     if (label) { const l = document.createElement("span"); l.className = "sent-label"; l.textContent = "Jev에 보낸 글"; pre.append(l); }
@@ -1351,9 +1366,7 @@
     let box;
     if (key[0] === "#") {
       const hop = Number(key.slice(1)); const sf = model.suff.get(hop); const c = view.L.cols.find((cc) => cc.hop === hop); if (!sf || !c) return hidePop();
-      const el = document.createElement("p"); el.className = "pop-verdict " + (sf.ok ? "ok" : "no"); const b = document.createElement("b"); b.textContent = sf.score.toFixed(2); const sp = document.createElement("span"); sp.textContent = sf.ok ? `찾는 것이 있다 (${sf.threshold.toFixed(2)} 이상)` : `아직 없다 (${sf.threshold.toFixed(2)} 미만)`; el.append(b, sp); pop.append(el);
-      const call = model.calls.get(sf.step); const q = call && call.request && call.request.questions && call.request.questions.sufficiency_0;
-      if (q) pop.append(sentEl({ text: String(q.instructions) }));
+      pop.append(sufficiencyEl(sf));
       pop.hidden = false;
       const gx = gaugeX(c, cam.z, -cam.x * cam.z); const pw = pop.offsetWidth; const ph = pop.offsetHeight;
       pop.style.left = clamp(gx - 40, 8, Math.max(8, W - pw - 8)) + "px"; pop.style.top = clamp(M.headerH - 6, 6, Math.max(6, H - ph - 6)) + "px";
@@ -1368,8 +1381,7 @@
       if (n.snippet && n.type !== "root") { const m = document.createElement("p"); m.className = "pop-match"; m.textContent = "낱말이 걸린 곳: " + n.snippet; pop.append(m); }
       if (n.again.length) { const m = document.createElement("p"); m.className = "pop-match"; m.textContent = `${hopName(n.again[0])}에서 다시 만남`; pop.append(m); }
       if (view.L.dorm.get(key)) { const m = document.createElement("p"); m.className = "pop-match"; m.textContent = `자식 ${view.L.dorm.get(key)}개는 미뤄 둠. 열 곳이 떨어지면 훑는다`; pop.append(m); }
-      const sent = sentText(n, false); if (sent) pop.append(sentEl(sent));
-      else if (n.type !== "root") { const t = document.createElement("p"); t.className = "pop-match"; t.textContent = n.path.join(" › "); pop.append(t); }
+      if (n.type !== "root") { const t = document.createElement("p"); t.className = "pop-match"; t.textContent = n.path.join(" › "); pop.append(t); }
     }
     pop.hidden = false;
     const z = cam.z; const sx = (box.x - cam.x) * z; const sy = M.headerH + (box.y - cam.y) * z; const pw = pop.offsetWidth; const ph = pop.offsetHeight;
@@ -1397,7 +1409,7 @@
   }
   function activate(key, opener) {
     if (!key) return;
-    if (key[0] === "#") { clearTimeout(popTimer); showPop(key); return; }
+    if (key[0] === "#") { openSheet(key, opener); return; }
     if (key[0] === "@") { const k = key.slice(1); if (ui.expanded.has(k)) ui.expanded.delete(k); else ui.expanded.add(k); hidePop(); setFollow(false); sync(performance.now(), true, null); return; }
     openSheet(key, opener);
   }
@@ -1406,19 +1418,23 @@
   const sheet = $("sheet"); let sheetOpener = null; let sheetRef = null;
   const sheetInset = () => (sheet.classList.contains("open") && W >= 720 ? sheet.offsetWidth : 0);
   function openSheet(ref, opener) {
-    const n = model.nodes.get(ref); if (!n || n.type === "root") return;
+    const n = model.nodes.get(ref); const sf = ref[0] === "#" ? model.suff.get(Number(ref.slice(1))) : null;
+    if (!sf && (!n || n.type === "root")) return;
+    cardVersion += 1; if (activeCardRequest) activeCardRequest.abort(); activeCardRequest = null;
     sheetOpener = opener || plot; sheetRef = ref; hidePop();
-    $("sheet-title").textContent = n.title; $("sheet-path").textContent = n.path.slice(0, -1).join(" › ");
-    const body = $("sheet-body"); body.replaceChildren(verdictEl(n));
-    const sent = sentText(n, true);
+    $("sheet-title").textContent = sf ? "충분성 판단" : n.title; $("sheet-path").textContent = sf ? hopName(Number(ref.slice(1))) : n.path.slice(0, -1).join(" › ");
+    const body = $("sheet-body"); body.replaceChildren(sf ? sufficiencyEl(sf) : verdictEl(n));
+    const question = sf && model.calls.get(sf.step)?.request?.questions?.sufficiency_0;
+    const sent = sf ? (question ? { text: String(question.instructions), criteria: question.criteria } : null) : sentText(n, true);
     if (sent) {
-      const det = document.createElement("details"); const sum = document.createElement("summary"); sum.textContent = "Jev에 보낸 글"; det.append(sum, sentEl(sent, false));
+      const det = document.createElement("details"); det.open = !!sf; const sum = document.createElement("summary"); sum.textContent = "Jev에 보낸 글"; det.append(sum, sentEl(sent, false));
       if (sent.criteria) { const c = document.createElement("div"); c.className = "sent"; c.style.marginTop = "6px"; c.textContent = `맞다: ${sent.criteria.true}\n아니다: ${sent.criteria.false}`; det.append(c); }
       body.append(det);
     }
-    const origin = document.createElement("section"); origin.className = "origin"; origin.setAttribute("aria-label", "원문");
-    body.append(origin);
-    loadOriginal(n, origin);
+    if (n) {
+      const origin = document.createElement("section"); origin.className = "origin"; origin.setAttribute("aria-label", "원문");
+      body.append(origin); loadOriginal(n, origin);
+    }
     body.scrollTop = 0;
     sheet.hidden = false; void sheet.offsetWidth; sheet.classList.add("open");
     view.focus = ref; setFollow(false);
@@ -1455,7 +1471,7 @@
     if (e.target !== cv && e.target !== plot && !drag && !pinch) { setHover(null); return; }
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, p);
     if (pinch && pointers.size >= 2) {
-      const [a, b] = [...pointers.values()]; const z = clamp(pinch.z * (Math.hypot(a.x - b.x, a.y - b.y) / pinch.d), 0.4, 1.6); const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
+      const [a, b] = [...pointers.values()]; const z = clamp(pinch.z * (Math.hypot(a.x - b.x, a.y - b.y) / pinch.d), minZoom(), 1.6); const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
       const wx = mx / cam.z + cam.x; const wy = (my - M.headerH) / cam.z + cam.y; cam.z = cam.tz = z; cam.x = cam.tx = wx - mx / z; cam.y = cam.ty = wy - (my - M.headerH) / z; cam.mode = "idle"; setFollow(false); updateZoomLabel(); invalidate(); return;
     }
     if (drag && drag.id === e.pointerId) {
@@ -1484,7 +1500,7 @@
   plot.addEventListener("wheel", (e) => {
     if (e.target !== cv && e.target !== plot) return;
     const p = local(e);
-    if (e.ctrlKey || e.metaKey) { e.preventDefault(); const z = clamp(cam.z * Math.exp(-e.deltaY * 0.012), 0.4, 1.6); const wx = p.x / cam.z + cam.x; const wy = (p.y - M.headerH) / cam.z + cam.y; cam.z = cam.tz = z; cam.x = cam.tx = wx - p.x / z; cam.y = cam.ty = wy - (p.y - M.headerH) / z; cam.mode = "idle"; setFollow(false); updateZoomLabel(); invalidate(); return; }
+    if (e.ctrlKey || e.metaKey) { e.preventDefault(); const z = clamp(cam.z * Math.exp(-e.deltaY * 0.012), minZoom(), 1.6); const wx = p.x / cam.z + cam.x; const wy = (p.y - M.headerH) / cam.z + cam.y; cam.z = cam.tz = z; cam.x = cam.tx = wx - p.x / z; cam.y = cam.ty = wy - (p.y - M.headerH) / z; cam.mode = "idle"; setFollow(false); updateZoomLabel(); invalidate(); return; }
     const b = bounds(); const nx = clamp(cam.x + e.deltaX / cam.z, b.minX, b.maxX); const ny = clamp(cam.y + e.deltaY / cam.z, b.minY, b.maxY);
     if (Math.abs(nx - cam.x) < 0.5 && Math.abs(ny - cam.y) < 0.5) return;
     e.preventDefault(); cam.x = cam.tx = nx; cam.y = cam.ty = ny; cam.mode = "idle"; setFollow(false); hidePop(); invalidate();
