@@ -150,4 +150,26 @@ describe("Jev v2 hop contracts", () => {
     expect(limited.maximum).toBe(2);
     expect(limited.r).toMatchObject({ status: "limited", error: { code: "CALL_BUDGET" } });
   });
+  it("9 starts structural seed summaries alongside body and ancestor reads", async () => {
+    const f = fixture();
+    const started: string[] = [];
+    let release!: () => void;
+    const body = new Promise<void>(resolve => { release = resolve; });
+    const pending = searchWithJev({ query: "게임" }, {
+      ...f.deps,
+      searchCards: async () => [seed(f.parent)],
+      getNode: async id => {
+        if (id === parentId) { started.push("body"); await body; }
+        return f.deps.getNode(id);
+      },
+      getTreeOutline: async (id, depth) => {
+        if (depth === 1) started.push("summary");
+        return f.deps.getTreeOutline(id, depth);
+      },
+    });
+    try {
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(started).toEqual(expect.arrayContaining(["body", "summary"]));
+    } finally { release(); await pending; }
+  });
 });

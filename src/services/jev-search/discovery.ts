@@ -3,13 +3,19 @@ import type { TreeNodeWithCard, TreeOutline } from "../../shared/types.js";
 import type { JevSearchDependencies } from "./service.js";
 import type { JevSearchPolicy } from "./config.js";
 import { candidateFromNode, candidateFromOutline, childSummaryFromSymlinkOutline, lexicalSeedQuery, seedMatchSnippet, toOccurrence, type JevTraversalCandidate } from "./catalog.js";
-import { outlineAuditRequest } from "./audit.js";
+import { outlineAuditRequest, type AuditCallInput } from "./audit.js";
 import { JevRunError, JevRunTrace } from "./run.js";
 
 export interface SearchCandidate extends JevTraversalCandidate {
   ref: string;
   occurrence: CandidateOccurrence;
   discoveryOrder: number;
+}
+
+interface SummaryRead {
+  step: JevSearchStep;
+  call: AuditCallInput;
+  result: Promise<PromiseSettledResult<TreeOutline | null>>;
 }
 
 /** Reads in parallel, then commits candidates in source order for stable dedup. */
@@ -68,21 +74,33 @@ export class JevSearchCatalog {
     const call = this.run.beginCall(step, "lexical_seed", 0, { query: orQuery, limit: this.policy.seedLimit, root_node_id: this.rootId });
     try {
       const seeds = orQuery ? await this.deps.searchCards({ query: orQuery, strategy: "strict", limit: this.policy.seedLimit, root_node_id: this.rootId ?? undefined }) : [];
-      const values = await Promise.all(seeds.map(async (seed, index) => {
+      // Search results already identify structural seeds, so summaries need not
+      // wait for body/path hydration. Registration below still follows rank.
+      const summaries = seeds.map(seed => seed.node_id && seed.node_id !== this.rootId && seed.card_type === "structure" && !this.run.stopped()
+        ? this.prepareSummary(seed.node_id) : null);
+      const [values, summaryResults] = await Promise.all([Promise.allSettled(seeds.map(async (seed, index) => {
         if (!seed.node_id || this.run.stopped()) return null;
         const node = await this.deps.getNode(seed.node_id);
         if (!node || node.id === this.rootId) return null;
         const ancestors = await this.ancestors(node);
         return { candidate: candidateFromNode(node, ancestors, seed.node_path), rank: index + 1, snippet: seedMatchSnippet(seed.snippet) };
-      }));
-      if (!this.run.stopped()) for (const value of values) {
-        if (!value || this.run.limitCode) continue;
-        this.register(value.candidate, step, "lexical_seed", { lexical_rank: value.rank, match_snippet: value.snippet });
-      }
-      this.run.finish(step, call, { completedAt: new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "completed",
+      })), Promise.all(summaries.map(read => read?.result ?? null))]);
+      const found = values.map(value => {
+        if (this.run.stopped() || this.run.limitCode || value.status === "rejected" || !value.value) return null;
+        const seed = value.value;
+        return this.register(seed.candidate, step, "lexical_seed", { lexical_rank: seed.rank, match_snippet: seed.snippet });
+      });
+      const failed = values.some(value => value.status === "rejected");
+      const error = failed && !this.run.stopped() ? { code: "ATOM_SEED_FAILED", message: "Atom lexical seed read failed." } : null;
+      this.run.finish(step, call, { completedAt: failed && this.run.stopped() ? null : new Date().toISOString(),
+        disposition: this.run.stopped() ? "skipped" : failed ? "error" : "completed", error,
         outlineResponse: { result_count: seeds.length, orphan_count: seeds.filter(s => s.node_id === null).length, candidate_refs: step.candidate_refs } });
-      if (!this.run.stopped() && !this.run.limitCode) await this.summarize(this.structures);
-    } catch {
+      summaries.forEach((read, index) => {
+        if (read && summaryResults[index]) this.completeSummary(read, summaryResults[index], found[index]);
+      });
+      if (error) throw new JevRunError(error.code, error.message);
+    } catch (cause) {
+      if (cause instanceof JevRunError) throw cause;
       this.readFailure(step, call, "ATOM_SEED_FAILED", "Atom lexical seed read failed.");
     }
   }
@@ -157,24 +175,33 @@ export class JevSearchCatalog {
   }
 
   async summarize(candidates: SearchCandidate[]): Promise<void> {
-    await Promise.all(candidates.map(async candidate => {
-      const step = this.run.start("atom_outline", [candidate.ref]);
-      step.purpose = "symlink_summary";
-      step.parent_ref = candidate.ref;
-      const call = this.run.beginCall(step, "atom_outline", 1, outlineAuditRequest(candidate.nodeId, 1, 0, step.purpose, candidate.ref));
-      try {
-        const outline: TreeOutline | null = await this.deps.getTreeOutline(candidate.nodeId, 1, 0);
-        if (!outline) throw new Error("outline missing");
-        if (!this.run.stopped()) candidate.childSummary = childSummaryFromSymlinkOutline(outline.nodes);
-        step.canonical_node_id = outline.canonical_node_id;
-        this.run.finish(step, call, { completedAt: new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "completed",
-          outlineResponse: { canonical_node_id: outline.canonical_node_id, node_count: outline.nodes.length } });
-      } catch {
-        candidate.childSummary = null;
-        const error = { code: "ATOM_OUTLINE_FAILED", message: "Atom tree outline read failed." };
-        this.run.finish(step, call, { completedAt: this.run.stopped() ? null : new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "error", error: this.run.stopped() ? null : error });
-      }
-    }));
+    const reads = candidates.map(candidate => this.prepareSummary(candidate.nodeId, candidate.ref));
+    await Promise.all(reads.map(async (read, index) => this.completeSummary(read, await read.result, candidates[index])));
+  }
+
+  private prepareSummary(nodeId: string, ref?: string): SummaryRead {
+    const step = this.run.start("atom_outline", ref ? [ref] : []);
+    step.purpose = "symlink_summary";
+    step.parent_ref = ref ?? null;
+    const call = this.run.beginCall(step, "atom_outline", 1, outlineAuditRequest(nodeId, 1, 0, step.purpose, step.parent_ref));
+    const result = Promise.allSettled([this.deps.getTreeOutline(nodeId, 1, 0)]).then(([value]) => value);
+    return { step, call, result };
+  }
+
+  private completeSummary(read: SummaryRead, result: PromiseSettledResult<TreeOutline | null>, candidate: SearchCandidate | null): void {
+    const { step, call } = read;
+    if (candidate) { step.parent_ref = candidate.ref; step.candidate_refs = [candidate.ref]; }
+    if (result.status === "fulfilled" && result.value) {
+      const outline = result.value;
+      if (candidate && !this.run.stopped()) candidate.childSummary = childSummaryFromSymlinkOutline(outline.nodes);
+      step.canonical_node_id = outline.canonical_node_id;
+      this.run.finish(step, call, { completedAt: new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "completed",
+        outlineResponse: { canonical_node_id: outline.canonical_node_id, node_count: outline.nodes.length } });
+    } else {
+      if (candidate) candidate.childSummary = null;
+      const error = { code: "ATOM_OUTLINE_FAILED", message: "Atom tree outline read failed." };
+      this.run.finish(step, call, { completedAt: this.run.stopped() ? null : new Date().toISOString(), disposition: this.run.stopped() ? "skipped" : "error", error: this.run.stopped() ? null : error });
+    }
   }
 
   private readFailure(step: JevSearchStep, call: Parameters<JevRunTrace["finish"]>[1], code: string, message: string): void {
