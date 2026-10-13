@@ -61,6 +61,14 @@ describe("published Jev graph event contract", () => {
     applyEvent(model, event("run_terminal", [], [], { hop: 1, terminal_status: "complete", stop_reason: "sufficient" }));
     expect(model.maxHop).toBe(0);
   });
+  it("clears the old gate verdict when a pruned seed is reopened without a gate", () => {
+    const { model, applyEvent } = adapter();
+    applyEvent(model, event("lexical_seed", [candidate("parent", "structure")]));
+    applyEvent(model, event("structure_noul", [], [{ ref: "parent", action: "pruned", score: 0.2, question_key: "structure_0" }]));
+    applyEvent(model, event("atom_outline", [], [{ ref: "parent", action: "opened_root", score: null, question_key: null }]));
+    expect(model.nodes.get("parent")).toMatchObject({ score: null, asked: { step: "structure_noul", key: "structure_0" }, byRoot: true, verdict: "open" });
+    expect(model.calls.size).toBe(0);
+  });
   it("the contract assertions catch a dropped deferral and truncated audit text", () => {
     const mutant = html.replace('n.deferred = true;', 'n.deferred = false;').replace('lines.join("\\n"), criteria:', 'lines.slice(2).join("\\n"), criteria:');
     const { model, applyEvent, sentText } = adapter(mutant);

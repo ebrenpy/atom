@@ -409,7 +409,7 @@
         if (dec.action === "alias") { const first = m.nodes.get(dec.reused_from_ref); if (first) { first.again.push(s.hop); delta.again.push(first.ref); } continue; }
         const n = m.nodes.get(dec.ref); if (!n) continue;
         if (dec.action === "no_body") n.verdict = "nobody";
-        else if (dec.action === "opened_by_hit" || dec.action === "opened_root") { n.verdict = "open"; n.byHit = dec.action === "opened_by_hit"; n.byRoot = dec.action === "opened_root"; delta.opened.push(n.ref); }
+        else if (dec.action === "opened_by_hit" || dec.action === "opened_root") { n.score = null; n.verdict = "open"; n.byHit = dec.action === "opened_by_hit"; n.byRoot = dec.action === "opened_root"; delta.opened.push(n.ref); }
         else if (dec.action === "queued" || dec.action === "pruned" || dec.action === "content_scored") {
           n.score = dec.score; n.judging = null; n.asked = { step: s.id, key: dec.question_key };
           n.verdict = dec.action === "queued" ? "open" : dec.action === "pruned" ? "closed" : dec.score >= m.hit ? "hit" : "low";
@@ -1353,7 +1353,7 @@
       const hop = Number(key.slice(1)); const sf = model.suff.get(hop); const c = view.L.cols.find((cc) => cc.hop === hop); if (!sf || !c) return hidePop();
       const el = document.createElement("p"); el.className = "pop-verdict " + (sf.ok ? "ok" : "no"); const b = document.createElement("b"); b.textContent = sf.score.toFixed(2); const sp = document.createElement("span"); sp.textContent = sf.ok ? `찾는 것이 있다 (${sf.threshold.toFixed(2)} 이상)` : `아직 없다 (${sf.threshold.toFixed(2)} 미만)`; el.append(b, sp); pop.append(el);
       const call = model.calls.get(sf.step); const q = call && call.request && call.request.questions && call.request.questions.sufficiency_0;
-      if (q) pop.append(sentEl({ text: String(q.instructions).split("\n").slice(1).join("\n") }));
+      if (q) pop.append(sentEl({ text: String(q.instructions) }));
       pop.hidden = false;
       const gx = gaugeX(c, cam.z, -cam.x * cam.z); const pw = pop.offsetWidth; const ph = pop.offsetHeight;
       pop.style.left = clamp(gx - 40, 8, Math.max(8, W - pw - 8)) + "px"; pop.style.top = clamp(M.headerH - 6, 6, Math.max(6, H - ph - 6)) + "px";
