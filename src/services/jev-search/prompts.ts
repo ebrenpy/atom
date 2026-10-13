@@ -90,16 +90,16 @@ export function buildSufficiencyPayload(query: string, context: JevSearchContext
   return {
     state: JSON.stringify({
       stage: "sufficiency_noul",
-      instructions: ["후보는 지금까지 찾은 Atom 지식 카드 묶음이다. 요청에 답하는 데 이 카드들이면 되는지 판단한다.", SESSION_CONTEXT_LINE],
+      instructions: ["후보는 지금까지 찾은 Atom 지식 카드 묶음이다. 요청이 찾는 것이 이 묶음 안에 있는지 판단한다.", SESSION_CONTEXT_LINE],
       user_prompt: compactText(query, PAYLOAD_QUERY_CHARS), session_context: compactSessionContext(context),
       candidates: nodes.map(stateCandidate),
     }),
     model: "jev-latest",
     questions: { sufficiency_0: {
       type: "noul",
-      instructions: ["이 카드들만 읽으면 요청에 답할 수 있는지 판단하세요.", "요청: " + compactText(query, PAYLOAD_QUERY_CHARS), "찾은 카드:",
+      instructions: ["요청이 찾는 것이 이 카드들 안에 있는지 판단하세요.", "요청: " + compactText(query, PAYLOAD_QUERY_CHARS), "찾은 카드:",
         ...nodes.map((n, index) => `${index + 1}. ${n.path.join(" › ")}: ${n.summary ?? "본문 없음"}`)].join("\n"),
-      criteria: { true: "이 카드들만 읽으면 요청에 답할 수 있다.", false: "이 카드들만으로는 요청에 답할 수 없다." },
+      criteria: { true: "요청이 찾는 것이 이 카드들 안에 있다.", false: "요청이 찾는 것이 이 카드들 안에 없다." },
     } },
   };
 }
@@ -139,14 +139,14 @@ export class JevAnswerError extends Error {
 
 export function selectionThreshold(
   scores: number[],
-  policy: Pick<{ scoreFloor: number; relativeScoreDelta: number }, "scoreFloor" | "relativeScoreDelta">,
+  policy: { scoreFloor: number; structureThreshold: number; relativeScoreDelta: number },
 ): number {
-  return scores.length === 0 ? policy.scoreFloor : Math.max(policy.scoreFloor, Math.max(...scores) - policy.relativeScoreDelta);
+  return scores.length === 0 ? policy.scoreFloor : Math.max(policy.scoreFloor, Math.min(policy.structureThreshold, Math.max(...scores) - policy.relativeScoreDelta));
 }
 
 export function selectFeedCards<T extends { score: number; order: number }>(
   feed: T[],
-  policy: Pick<{ scoreFloor: number; relativeScoreDelta: number; maxResults: number }, "scoreFloor" | "relativeScoreDelta" | "maxResults">,
+  policy: { scoreFloor: number; structureThreshold: number; relativeScoreDelta: number; maxResults: number },
 ): T[] {
   const threshold = selectionThreshold(feed.map((card) => card.score), policy);
   return feed

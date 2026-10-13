@@ -1,7 +1,7 @@
 import type { CardType, SearchResult } from "./types.js";
 
 export type JevSearchStatus = "complete" | "limited" | "cancelled" | "error";
-export type JevSearchStage = "atom_outline" | "structure_noul" | "content_noul" | "selection" | "run_terminal" | "lexical_seed" | "hit_parent" | "sufficiency_noul" | "widen";
+export type JevSearchStage = "atom_outline" | "structure_noul" | "content_noul" | "selection" | "run_terminal" | "lexical_seed" | "hit_parent" | "sufficiency_noul" | "widen" | "deferred_scan";
 export type JevAuditStage = "atom_outline" | "structure_noul" | "content_noul" | "lexical_seed" | "hit_parent" | "sufficiency_noul";
 export type JevSearchAction = "queued" | "pruned" | "content_scored" | "selected" | "not_selected" | "alias" | "no_body" | "opened_by_hit";
 export type JevSearchStopReason = "sufficient" | "exhausted" | null;
@@ -54,6 +54,7 @@ export interface JevSearchPolicyView {
   sufficiency_threshold: number;
   max_jev_calls: number;
   max_parallel_jev_calls: number;
+  defer_candidates: number;
 }
 
 export interface CandidateOccurrence {
@@ -107,6 +108,7 @@ export interface JevSearchStep {
   sufficiency_threshold?: number;
   widen_reason?: "no_entry" | "frontier_empty";
   stop_reason?: JevSearchStopReason;
+  deferred_kinds?: Array<"structure" | "content">;
 }
 
 export interface JevAuditCall {
